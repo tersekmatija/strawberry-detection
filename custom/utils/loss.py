@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import math
+import numpy as np
 
 class DetectionLoss(nn.Module):
 
@@ -135,108 +136,41 @@ class DetectionLoss(nn.Module):
 
 class SegmentationLoss(nn.Module):
 
-    def __init__(self):
+    def __init__(self, num_classes):
         super(SegmentationLoss, self).__init__()
 
         self.bce = nn.BCEWithLogitsLoss()
+        self.nc = num_classes
 
     def forward(self, predictions, targets):
         ps = predictions.view(-1)
         ts = targets.view(-1)
         self.bce = self.bce.to(ps.device)
         lseg = self.bce(ps, ts)
+        
+        preds = torch.argmax(predictions, dim = 1)
+        preds = torch.unsqueeze(preds, 1)
 
-        liou = 0
-        #metric = SegmentationMetric(2)
-        #nb, _, height, width = targets.shape
-        #pad_w, pad_h = shapes[0][1][1]
-        #pad_w = int(pad_w)
-        #pad_h = int(pad_h)
-        #_,lane_line_pred=torch.max(predictions[2], 1)
-        #_,lane_line_gt=torch.max(targets[2], 1)
-        #lane_line_pred = lane_line_pred[:, pad_h:height-pad_h, pad_w:width-pad_w]
-        #lane_line_gt = lane_line_gt[:, pad_h:height-pad_h, pad_w:width-pad_w]
-        #metric.reset()
-        #metric.addBatch(lane_line_pred.cpu(), lane_line_gt.cpu())
-        #IoU = metric.IntersectionOverUnion()
-        #liou = 1 - IoU
+        targets = torch.argmax(targets, dim = 1)
+        masks = torch.unsqueeze(targets, 1)
+        #print(preds.shape)
+      
+        ious = torch.zeros(preds.shape[0])
+        present_classes = torch.zeros(preds.shape[0])
+        for cls in range(self.nc):
+            masks_c = masks == cls
+            outputs_c = preds == cls
+            TP = torch.sum(torch.logical_and(masks_c, outputs_c), dim = [1, 2, 3]).cpu()
+            FP = torch.sum(torch.logical_and(torch.logical_not(masks_c), outputs_c), dim = [1, 2, 3]).cpu()
+            FN = torch.sum(torch.logical_and(masks_c, torch.logical_not(outputs_c)), dim = [1, 2, 3]).cpu()
+            ious += torch.nan_to_num(TP / (TP + FP + FN))
+            present_classes += (masks.view(preds.shape[0], -1) == cls).any(dim = 1).cpu()
+
+        iou = torch.mean(ious / present_classes)
+
+        liou = 1 - iou
 
         return lseg, liou
-
-class SegmentationMetric(object):
-    '''
-    imgLabel [batch_size, height(144), width(256)]
-    confusionMatrix [[0(TN),1(FP)],
-                     [2(FN),3(TP)]]
-    '''
-    def __init__(self, numClass):
-        self.numClass = numClass
-        self.confusionMatrix = np.zeros((self.numClass,)*2)
-
-    def pixelAccuracy(self):
-        # return all class overall pixel accuracy
-        # acc = (TP + TN) / (TP + TN + FP + TN)
-        acc = np.diag(self.confusionMatrix).sum() /  self.confusionMatrix.sum()
-        return acc
-        
-    def lineAccuracy(self):
-        Acc = np.diag(self.confusionMatrix) / (self.confusionMatrix.sum(axis=1) + 1e-12)
-        return Acc[1]
-
-    def classPixelAccuracy(self):
-        # return each category pixel accuracy(A more accurate way to call it precision)
-        # acc = (TP) / TP + FP
-        classAcc = np.diag(self.confusionMatrix) / (self.confusionMatrix.sum(axis=0) + 1e-12)
-        return classAcc
-
-    def meanPixelAccuracy(self):
-        classAcc = self.classPixelAccuracy()
-        meanAcc = np.nanmean(classAcc)
-        return meanAcc
-
-    def meanIntersectionOverUnion(self):
-        # Intersection = TP Union = TP + FP + FN
-        # IoU = TP / (TP + FP + FN)
-        intersection = np.diag(self.confusionMatrix)
-        union = np.sum(self.confusionMatrix, axis=1) + np.sum(self.confusionMatrix, axis=0) - np.diag(self.confusionMatrix)
-        IoU = intersection / union
-        IoU[np.isnan(IoU)] = 0
-        mIoU = np.nanmean(IoU)
-        return mIoU
-    
-    def IntersectionOverUnion(self):
-        intersection = np.diag(self.confusionMatrix)
-        union = np.sum(self.confusionMatrix, axis=1) + np.sum(self.confusionMatrix, axis=0) - np.diag(self.confusionMatrix)
-        IoU = intersection / union
-        IoU[np.isnan(IoU)] = 0
-        return IoU[1]
-
-    def genConfusionMatrix(self, imgPredict, imgLabel):
-        # remove classes from unlabeled pixels in gt image and predict
-        # print(imgLabel.shape)
-        mask = (imgLabel >= 0) & (imgLabel < self.numClass)
-        label = self.numClass * imgLabel[mask] + imgPredict[mask]
-        count = np.bincount(label, minlength=self.numClass**2)
-        confusionMatrix = count.reshape(self.numClass, self.numClass)
-        return confusionMatrix
-
-    def Frequency_Weighted_Intersection_over_Union(self):
-        # FWIOU =     [(TP+FN)/(TP+FP+TN+FN)] *[TP / (TP + FP + FN)]
-        freq = np.sum(self.confusionMatrix, axis=1) / np.sum(self.confusionMatrix)
-        iu = np.diag(self.confusionMatrix) / (
-                np.sum(self.confusionMatrix, axis=1) + np.sum(self.confusionMatrix, axis=0) -
-                np.diag(self.confusionMatrix))
-        FWIoU = (freq[freq > 0] * iu[freq > 0]).sum()
-        return FWIoU
-
-
-    def addBatch(self, imgPredict, imgLabel):
-        assert imgPredict.shape == imgLabel.shape
-        self.confusionMatrix += self.genConfusionMatrix(imgPredict, imgLabel)
-
-    def reset(self):
-        self.confusionMatrix = np.zeros((self.numClass, self.numClass))
-
 
 
 def smooth_BCE(eps=0.1):  # https://github.com/ultralytics/yolov3/issues/238#issuecomment-598028441
@@ -303,7 +237,7 @@ class CombinedLoss(nn.Module):
         self.anchors = torch.tensor(anchors).float().view(self.nl, -1, 2)
         self.balance = balance
 
-        self.seg_loss = SegmentationLoss()
+        self.seg_loss = SegmentationLoss(nc)
         self.det_loss = DetectionLoss(nc, gr, anchors = anchors)
 
     def forward(self, predictions, targets):
@@ -311,4 +245,4 @@ class CombinedLoss(nn.Module):
         lseg, liou = self.seg_loss(predictions[0], targets[0])
         lbox, lobj, lcls = self.det_loss(predictions[1], targets[1])
 
-        return lseg + liou + lbox + lobj + lcls
+        return lseg, liou, lbox, lobj, lcls

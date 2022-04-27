@@ -8,16 +8,18 @@ from models.decoder import *
 
 class Model(nn.Module):
 
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, anchors, strides):
         super(Model, self).__init__()
 
         self.nc = num_classes
         self.gr = 1.0
+        self.anchors = anchors
+        self.strides = strides
 
         self.backbone = YoloPC3()
         self.decoder = YoloPC3Decoder()
         self.seg_head = SegmentationHead(num_classes = self.nc)
-        self.det_head = DetectionHead(num_classes = self.nc)
+        self.det_head = DetectionHead(num_classes = self.nc, anchors=self.anchors, strides=self.strides)
 
 
     def forward(self, x):

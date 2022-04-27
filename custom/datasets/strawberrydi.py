@@ -41,10 +41,9 @@ class StrawDIDataset(torch.utils.data.Dataset):
         mask = F.convert_image_dtype(mask, dtype=torch.float)
         
         # TODO: add transform
-        #if self.transforms is not None:
-        #    img, mask = self.transforms(img, mask)
-        img = img[:,:704,:768]
-        mask = mask[:,:704,:768]
+        if self.transforms is not None:
+            img, mask = self.transforms(img, mask)
+ 
         
         # get unique ids and remove bg
         obj_ids = torch.unique(mask)
@@ -54,16 +53,18 @@ class StrawDIDataset(torch.utils.data.Dataset):
         masks = mask == obj_ids[:, None, None]
         
         # get semantic segmentation mask
+        if masks.shape[0] == 0: masks = torch.zeros(1, mask.shape[1], mask.shape[2])
         sem = torch.max(masks, dim = 0)[0].float()
-        sem = torch.stack([sem, 1-sem])
+        sem = torch.stack([1-sem, sem]) # bg, cls1
         #print(sem.shape)
         
         # get boxes and normalize them - use ones as only one class
         boxes = torch.ones((len(obj_ids), 6))
-        boxes[:, 2:] = masks_to_boxes(masks)
-        boxes[:, 2:] = box_convert(boxes[:, 2:], "xyxy", "cxcywh")
-        boxes[:, [3, 5]] /= img.shape[1]  # height
-        boxes[:, [2, 4]] /= img.shape[2]
+        if len(obj_ids) > 0:
+            boxes[:, 2:] = masks_to_boxes(masks)
+            boxes[:, 2:] = box_convert(boxes[:, 2:], "xyxy", "cxcywh")
+            boxes[:, [3, 5]] /= img.shape[1]  # height
+            boxes[:, [2, 4]] /= img.shape[2]
         #print(img.shape)
         
         return img, [sem, boxes]

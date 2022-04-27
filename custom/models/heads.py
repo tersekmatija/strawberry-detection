@@ -36,8 +36,12 @@ class SegmentationHead(nn.Module):
 
 class DetectionHead(nn.Module):
 
-    def __init__(self, ch = 256, num_classes=1):
+    def __init__(self, num_classes, anchors, strides, ch = 256):
         super(DetectionHead, self).__init__()
+
+        self.num_classes = anchors
+        self.anchors = anchors
+        self.stides = strides
 
         self.c3_1 = C3(ch, ch//2, shortcut=False)
         self.conv_1 = Conv(ch//2, ch//2, 3, 2, p=1)
@@ -46,7 +50,7 @@ class DetectionHead(nn.Module):
         self.conv_2 = Conv(ch, ch, 3, 2, p=1)
 
         self.c3_3 = C3(ch*2, ch*2, shortcut=False)
-        self.detect = Detect(num_classes, [[3,9,5,11,4,20], [7,18,6,39,12,31], [19,50,38,81,68,157]], [128, 256, 512], [40, 20, 10])
+        self.detect = Detect(num_classes, anchors, [128, 256, 512], strides)
 
     def forward(self, x, x_prev1, x_prev2):
 
