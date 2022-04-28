@@ -17,8 +17,6 @@ import utils.augmentations as A
 from datasets.strawberrydi import StrawDIDataset
 from models.model import Model
 
-# TODO: validation, evaluation, plotting, learning rate scheduler
-
 parser = argparse.ArgumentParser()
 parser.add_argument('-cfg', '--config', type=str, help="Path to training config", required=True)
 args = parser.parse_args()
@@ -52,7 +50,7 @@ model = Model(cfg.num_classes, cfg.anchors, cfg.strides, cfg.reduction)
 model.train()
 model.cuda()
 
-criterion = CombinedLoss(cfg.num_classes, model.gr, anchors = cfg.anchors)
+criterion = CombinedLoss(cfg.num_classes, model.gr, anchors = cfg.anchors stride=cfg.stride)
 
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 iters_per_epoch = len(trainloader)
@@ -121,7 +119,6 @@ for epoch in range(epochs):
         loss = lseg + liou + lbox + lobj + lcls
         losses.append(loss.item())
         ious.append(1 - liou.item())
-        # TODO: mAP
 
         if i in idx_draw:
             img_out = inputs.detach().cpu()

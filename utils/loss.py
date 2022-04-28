@@ -53,7 +53,7 @@ def bbox_iou(box1, box2, x1y1x2y2=True, GIoU=False, DIoU=False, CIoU=False, eps=
 
 class DetectionLoss(nn.Module):
 
-    def __init__(self, nc, gr, anchors = (), train_anchor_threshold = 4.0, balance = [4.0, 1.0, 0.4]):
+    def __init__(self, nc, gr, anchors = (), train_anchor_threshold = 4.0, balance = [4.0, 1.0, 0.4], stride = [8, 16, 32]):
         super(DetectionLoss, self).__init__()
         self.train_anchor_threshold = train_anchor_threshold
         self.na = len(anchors[0]) // 2
@@ -61,8 +61,7 @@ class DetectionLoss(nn.Module):
         print("NL"+str(self.nl))
         self.gr = gr
         self.nc = nc
-        # TODO: revert if doesn't work
-        stride = [8, 16, 32]
+
         self.anchors = torch.tensor(anchors).float().view(self.nl, -1, 2) / torch.Tensor(stride).float().view(-1, 1, 1)
         self.balance = balance
 
@@ -203,7 +202,7 @@ class SegmentationLoss(nn.Module):
 
 class CombinedLoss(nn.Module):
 
-    def __init__(self, nc, gr, anchors = (), train_anchor_threshold = 4.0, balance = [4.0, 1.0, 0.4]):
+    def __init__(self, nc, gr, anchors = (), train_anchor_threshold = 4.0, balance = [4.0, 1.0, 0.4], stride=[8, 16, 32]):
         super(CombinedLoss, self).__init__()
         self.train_anchor_threshold = train_anchor_threshold
         self.na = len(anchors[0]) // 2
@@ -212,9 +211,10 @@ class CombinedLoss(nn.Module):
         self.nc = nc
         self.anchors = torch.tensor(anchors).float().view(self.nl, -1, 2)
         self.balance = balance
+        self.stride = stride
 
         self.seg_loss = SegmentationLoss(nc)
-        self.det_loss = DetectionLoss(nc, gr, anchors = anchors)
+        self.det_loss = DetectionLoss(nc, gr, anchors=anchors, stride=stride)
 
     def forward(self, predictions, targets):
 
