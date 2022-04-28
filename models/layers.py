@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from utils.activations import *
 
+# Adapted from YoloV5
 class Conv(nn.Module):
 
     def __init__(self, in_channels, out_channels, k=1, s=1, p=0, g=1, act=SiLU(), bias=False):
@@ -65,36 +66,27 @@ class Detect(nn.Module):
         self.register_buffer('anchors', a)  # shape(nl,na,2)
         self.register_buffer('anchor_grid', a.clone().view(self.nl, 1, -1, 1, 1, 2))  # shape(nl,1,na,1,1,2)
         self.m = nn.ModuleList(nn.Conv2d(x, self.no * self.na, 1) for x in ch)  # output conv  
-        self.stride = stride # CHANGE ME
+        self.stride = stride
 
     def forward(self, x):
         z = []  # inference output
         for i in range(self.nl):
             x[i] = self.m[i](x[i])  # conv
-            # print(str(i)+str(x[i].shape))
             bs, _, ny, nx = x[i].shape  # x(bs,255,w,w) to x(bs,3,w,w,85)
             x[i]=x[i].view(bs, self.na, self.no, ny*nx).permute(0, 1, 3, 2).view(bs, self.na, ny, nx, self.no).contiguous()
-            # x[i] = x[i].view(bs, self.na, self.no, ny, nx).permute(0, 1, 3, 4, 2).contiguous()
-            # print(str(i)+str(x[i].shape))
 
             if not self.training:  # inference
                 if self.grid[i].shape[2:4] != x[i].shape[2:4]:
                     self.grid[i] = self._make_grid(nx, ny).to(x[i].device)
                 y = x[i].sigmoid()
-                #print(self.stride)
-                #print("**")
-                #print(y.shape) #[1, 3, w, h, 85]
-                #print(self.grid[i].shape) #[1, 3, w, h, 2]
+
                 y[..., 0:2] = (y[..., 0:2] * 2. - 0.5 + self.grid[i].to(x[i].device)) * self.stride[i]  # xy
-                y[..., 2:4] = (y[..., 2:4] * 2) ** 2 * self.anchor_grid[i]  # wh
-                """print("**")
-                print(y.shape)  #[1, 3, w, h, 85]
-                print(y.view(bs, -1, self.no).shape) #[1, 3*w*h, 85]"""
+                y[..., 2:4] = (y[..., 2:4] * 2) ** 2 * self.anchor_grid[i] # ADD ME BACK IF REMOVED DIV IN LOSS* self.stride[i] # wh
+
                 z.append(y.view(bs, -1, self.no))
+
         return x if self.training else (torch.cat(z, 1), x)
 
-    @staticmethod
-    def _make_grid(nx=20, ny=20):
-        
+    def _make_grid(self, nx=20, ny=20):
         yv, xv = torch.meshgrid([torch.arange(ny), torch.arange(nx)])
         return torch.stack((xv, yv), 2).view((1, 1, ny, nx, 2)).float()

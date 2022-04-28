@@ -6,9 +6,12 @@ import torch.optim as optim
 import torchvision
 from torch.utils.tensorboard import SummaryWriter
 import os
+import random
+import numpy as np
 
 from utils.loss import CombinedLoss
 from utils.config import load_config
+from utils.draw import draw_overlay
 from utils.schedulers import CosineAnnealingLR
 import utils.augmentations as A
 from datasets.strawberrydi import StrawDIDataset
@@ -36,10 +39,16 @@ transforms = A.Compose([
     A.Resize(cfg.img_shape)
 ])
 
+transforms_val = A.Resize(cfg.img_shape)
+
 train_dataset = StrawDIDataset(split="train", root=cfg.dataset_dir, transforms=transforms)
 trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, num_workers=4, collate_fn=StrawDIDataset.collate_fn)
 
-model = Model(cfg.num_classes, cfg.anchors, cfg.strides)
+val_dataset = StrawDIDataset(split="val", root=cfg.dataset_dir, transforms=transforms_val)
+valloader = torch.utils.data.DataLoader(val_dataset, batch_size=1, num_workers=4, collate_fn=StrawDIDataset.collate_fn)
+
+
+model = Model(cfg.num_classes, cfg.anchors, cfg.strides, cfg.reduction)
 model.train()
 model.cuda()
 
@@ -51,7 +60,11 @@ scheduler = CosineAnnealingLR(optimizer, cfg.epochs * iters_per_epoch, eta_min =
 
 
 n_iter = 0
+val_loss_best = torch.inf
 for epoch in range(epochs):
+
+    # train
+    model.train()
     with tqdm(total=len(trainloader.dataset), desc ='Training - Epoch: '+str(epoch)+"/"+str(epochs), unit='chunks') as prog_bar:
         for i, data in enumerate(trainloader):
             inputs, labels = data
@@ -60,21 +73,14 @@ for epoch in range(epochs):
             optimizer.zero_grad()
             outputs = model(inputs)
 
-            #print(labels[0].shape)
-            #labels[0] = torch.nn.functional.interpolate(labels[0], scale_factor=0.25, mode='nearest')
             labels[0] = labels[0].cuda()
             labels[1] = labels[1].cuda()
-            #print(outputs[1].shape)
-            #print(labels[1].shape)
-
 
             lseg, liou, lbox, lobj, lcls = criterion(outputs,labels)
             loss = lseg + liou + lbox + lobj + lcls
             loss.backward()
             scheduler.step(n_iter)
 
-            #torch.nn.utils.clip_grad_norm_(model.parameters(),
-            #                          max_norm=10.0)
             logs = {
                 "train/l_combined":loss.item(),
                 "train/l_seg":lseg.item(),
@@ -93,4 +99,45 @@ for epoch in range(epochs):
             prog_bar.set_postfix(**{'run:': "model_name",
                                      **{key.split("/")[1] : value for key,value in logs.items()}})
             prog_bar.update(batch_size)
+    
+    # validate
+    model.eval()
+    idx_draw = random.sample(range(len(valloader)), min(len(valloader),cfg.val_plot_num))
+    losses = []
+    imgs = []
+    ious = []
+    for i, data in tqdm(enumerate(valloader)):
+        inputs, labels = data
+        inputs = inputs.cuda()
+
+        optimizer.zero_grad()
+        outputs = model(inputs)
+
+        labels[0] = labels[0].cuda()
+        labels[1] = labels[1].cuda()
+
+        # compute loss
+        lseg, liou, lbox, lobj, lcls = criterion([outputs[0], outputs[1][1]],labels)
+        loss = lseg + liou + lbox + lobj + lcls
+        losses.append(loss.item())
+        ious.append(1 - liou.item())
+        # TODO: mAP
+
+        if i in idx_draw:
+            img_out = inputs.detach().cpu()
+            boxes_out = outputs[1][0].detach().cpu()
+            seg_out = outputs[0].detach().cpu()
+
+            img = draw_overlay(img_out[0], boxes_out[0].unsqueeze(0), seg_out[0][1], show=False)
+            imgs.append(img)
+
+    val_loss = np.mean(losses)
+    val_iou = np.mean(ious)
+    print(f"Val loss: {val_loss}, Val mIoU: {val_iou}")
+    writer.add_scalar("val/l_combined", val_loss, epoch)
+    writer.add_scalar("val/mIoU", val_iou, epoch)
+    writer.add_images("val/images", torch.stack(imgs), epoch)
+
     torch.save(model.state_dict(), os.path.join(cfg.save_dir, "last.pt"))
+    if val_loss < val_loss_best:
+        torch.save(model.state_dict(), os.path.join(cfg.save_dir, "best.pt"))

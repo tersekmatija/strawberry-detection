@@ -5,13 +5,14 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 from torch.utils.tensorboard import SummaryWriter
-from torchvision.utils import draw_segmentation_masks, draw_bounding_boxes
 
 import os
 import matplotlib.pyplot as plt
 import numpy as np
 
+from utils.draw import draw_overlay
 from utils.config import load_config
+from utils.boxutils import non_max_suppression
 import utils.augmentations as A
 from datasets.strawberrydi import StrawDIDataset
 from models.model import Model
@@ -35,7 +36,12 @@ model = Model(cfg.num_classes, cfg.anchors, cfg.strides)
 
 if cfg.demo_weights is None:
     raise RuntimeError("Demo run not set!")
-model.load_state_dict(torch.load(cfg.demo_weights, map_location="cpu"))
+state_dict = torch.load(cfg.demo_weights, map_location="cpu")
+#state_dict.pop("det_head.detect.anchor_grid")
+#state_dict.pop("det_head.detect.anchors")
+
+print(state_dict.keys())
+model.load_state_dict(state_dict)
 model.cuda()
 model.eval()
 
@@ -46,16 +52,13 @@ with tqdm(total=len(trainloader.dataset), desc ='Demo', unit='chunks') as prog_b
 
         outputs = model(inputs)
 
-        labels[0] = labels[0].cuda()
-        labels[1] = labels[1].cuda()
+        img_out = inputs.detach().cpu()
+        boxes_out = outputs[1][0].detach().cpu()
+        seg_out = outputs[0].detach().cpu()
 
-        img = (inputs.detach().cpu()[0] * 255).type(torch.uint8)
-        seg = torch.argmax(outputs[0].detach().cpu()[0], dim = 0).bool()
-        img = draw_segmentation_masks(img, seg, alpha=0.8, colors="blue")
-        img = img.numpy()
-        img = img.astype(np.uint8).transpose(1,2,0)
-        plt.imshow(img)
-        plt.show()
+        for idx in range(batch_size):
+            draw_overlay(img_out[idx], boxes_out[idx].unsqueeze(0), seg_out[idx][1])
+
 
         prog_bar.set_postfix(**{'run:': cfg.demo_run})
         prog_bar.update(batch_size)

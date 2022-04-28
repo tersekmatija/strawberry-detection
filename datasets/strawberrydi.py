@@ -65,7 +65,7 @@ class StrawDIDataset(torch.utils.data.Dataset):
             boxes[:, 2:] = box_convert(boxes[:, 2:], "xyxy", "cxcywh")
             boxes[:, [3, 5]] /= img.shape[1]  # height
             boxes[:, [2, 4]] /= img.shape[2]
-        #print(img.shape)
+        #print(boxes[0])
         
         return img, [sem, boxes]
 

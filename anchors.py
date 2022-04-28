@@ -22,7 +22,7 @@ from datasets.strawberrydi import StrawDIDataset
 from models.model import Model
 
 
-
+# Adapted from YoloV5
 def kmean_anchors(loader, n=9, img_size=640, thr=4.0, gen=1000, verbose=True):
     """ Creates kmeans-evolved anchors from training dataset
 
@@ -133,7 +133,7 @@ args = parser.parse_args()
 
 cfg = load_config(args.config)
 
-train_dataset = StrawDIDataset(split="train", root=cfg.dataset_dir, transforms=torchvision.transforms.CenterCrop(768))
+train_dataset = StrawDIDataset(split="train", root=cfg.dataset_dir)
 trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=1, num_workers=4, collate_fn=StrawDIDataset.collate_fn)
 
-kmean_anchors(trainloader)
+kmean_anchors(trainloader, n = 6)

@@ -8,18 +8,20 @@ from models.decoder import *
 
 class Model(nn.Module):
 
-    def __init__(self, num_classes, anchors, strides):
+    def __init__(self, num_classes, anchors, strides, reduction = 1):
         super(Model, self).__init__()
+
+        ch_ = int(32 / reduction) if isinstance(reduction, int) and reduction >= 1 else 32
 
         self.nc = num_classes
         self.gr = 1.0
         self.anchors = anchors
         self.strides = strides
 
-        self.backbone = YoloPC3()
-        self.decoder = YoloPC3Decoder()
-        self.seg_head = SegmentationHead(num_classes = self.nc)
-        self.det_head = DetectionHead(num_classes = self.nc, anchors=self.anchors, strides=self.strides)
+        self.backbone = YoloPC3(ch_)
+        self.decoder = YoloPC3Decoder(ch=ch_*16)
+        self.seg_head = SegmentationHead(num_classes = self.nc, ch=ch_*8)
+        self.det_head = DetectionHead(num_classes=self.nc, anchors=self.anchors, strides=self.strides, ch=ch_*8)
 
 
     def forward(self, x):

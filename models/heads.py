@@ -50,7 +50,7 @@ class DetectionHead(nn.Module):
         self.conv_2 = Conv(ch, ch, 3, 2, p=1)
 
         self.c3_3 = C3(ch*2, ch*2, shortcut=False)
-        self.detect = Detect(num_classes, anchors, [128, 256, 512], strides)
+        self.detect = Detect(num_classes, anchors, [ch//2, ch, ch*2], strides)
 
     def forward(self, x, x_prev1, x_prev2):
 
@@ -63,7 +63,6 @@ class DetectionHead(nn.Module):
 
         x = torch.cat([x, x_prev2], dim = 1)
         c3_3 = self.c3_3(x)
-        #print(c3_3.shape)
         x = self.detect([c3_1, c3_2, c3_3])
 
         return x

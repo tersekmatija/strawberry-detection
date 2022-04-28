@@ -3,6 +3,54 @@ import torch.nn as nn
 import math
 import numpy as np
 
+def smooth_BCE(eps=0.1):  # https://github.com/ultralytics/yolov3/issues/238#issuecomment-598028441
+    # return positive, negative label smoothing BCE targets
+    return 1.0 - 0.5 * eps, 0.5 * eps
+
+def bbox_iou(box1, box2, x1y1x2y2=True, GIoU=False, DIoU=False, CIoU=False, eps=1e-9):
+    # Returns the IoU of box1 to box2. box1 is 4, box2 is nx4
+    box2 = box2.T
+
+    # Get the coordinates of bounding boxes
+    if x1y1x2y2:  # x1, y1, x2, y2 = box1
+        b1_x1, b1_y1, b1_x2, b1_y2 = box1[0], box1[1], box1[2], box1[3]
+        b2_x1, b2_y1, b2_x2, b2_y2 = box2[0], box2[1], box2[2], box2[3]
+    else:  # transform from xywh to xyxy
+        b1_x1, b1_x2 = box1[0] - box1[2] / 2, box1[0] + box1[2] / 2
+        b1_y1, b1_y2 = box1[1] - box1[3] / 2, box1[1] + box1[3] / 2
+        b2_x1, b2_x2 = box2[0] - box2[2] / 2, box2[0] + box2[2] / 2
+        b2_y1, b2_y2 = box2[1] - box2[3] / 2, box2[1] + box2[3] / 2
+
+    # Intersection area
+    inter = (torch.min(b1_x2, b2_x2) - torch.max(b1_x1, b2_x1)).clamp(0) * \
+            (torch.min(b1_y2, b2_y2) - torch.max(b1_y1, b2_y1)).clamp(0)
+
+    # Union Area
+    w1, h1 = b1_x2 - b1_x1, b1_y2 - b1_y1 + eps
+    w2, h2 = b2_x2 - b2_x1, b2_y2 - b2_y1 + eps
+    union = w1 * h1 + w2 * h2 - inter + eps
+
+    iou = inter / union
+    if GIoU or DIoU or CIoU:
+        cw = torch.max(b1_x2, b2_x2) - torch.min(b1_x1, b2_x1)  # convex (smallest enclosing box) width
+        ch = torch.max(b1_y2, b2_y2) - torch.min(b1_y1, b2_y1)  # convex height
+        if CIoU or DIoU:  # Distance or Complete IoU https://arxiv.org/abs/1911.08287v1
+            c2 = cw ** 2 + ch ** 2 + eps  # convex diagonal squared
+            rho2 = ((b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 +
+                    (b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2) / 4  # center distance squared
+            if DIoU:
+                return iou - rho2 / c2  # DIoU
+            elif CIoU:  # https://github.com/Zzh-tju/DIoU-SSD-pytorch/blob/master/utils/box/box_utils.py#L47
+                v = (4 / math.pi ** 2) * torch.pow(torch.atan(w2 / h2) - torch.atan(w1 / h1), 2)
+                with torch.no_grad():
+                    alpha = v / ((1 + eps) - iou + v)
+                return iou - (rho2 / c2 + v * alpha)  # CIoU
+        else:  # GIoU https://arxiv.org/pdf/1902.09630.pdf
+            c_area = cw * ch + eps  # convex area
+            return iou - (c_area - union) / c_area  # GIoU
+    else:
+        return iou  # IoU
+
 class DetectionLoss(nn.Module):
 
     def __init__(self, nc, gr, anchors = (), train_anchor_threshold = 4.0, balance = [4.0, 1.0, 0.4]):
@@ -13,7 +61,9 @@ class DetectionLoss(nn.Module):
         print("NL"+str(self.nl))
         self.gr = gr
         self.nc = nc
-        self.anchors = torch.tensor(anchors).float().view(self.nl, -1, 2)
+        # TODO: revert if doesn't work
+        stride = [8, 16, 32]
+        self.anchors = torch.tensor(anchors).float().view(self.nl, -1, 2) / torch.Tensor(stride).float().view(-1, 1, 1)
         self.balance = balance
 
         self.bce = nn.BCEWithLogitsLoss()
@@ -58,31 +108,13 @@ class DetectionLoss(nn.Module):
         return lbox, lobj, lcls
 
     def build_targets(self, predictions, targets):
-        '''
-        predictions
-        [16, 3, 32, 32, 85]
-        [16, 3, 16, 16, 85]
-        [16, 3, 8, 8, 85]
-        torch.tensor(predictions[i].shape)[[3, 2, 3, 2]]
-        [32,32,32,32]
-        [16,16,16,16]
-        [8,8,8,8]
-        targets[3,x,7]
-        t [index, class, x, y, w, h, head_index]
-        '''
-        # Build targets for compute_loss(), input targets(image,class,x,y,w,h)
-        #det = model.module.model[model.module.detector_index] if is_parallel(model) \
-        #    else model.model[model.detector_index]  # Detect() module
-        # print(type(model))
-        # det = model.model[model.detector_index]
-        # print(type(det))
+
         self.anchors = self.anchors.to(targets.device)
         na, nt = self.na, targets.shape[0]  # number of anchors, targets
         tcls, tbox, indices, anch = [], [], [], []
         gain = torch.ones(7, device=targets.device)  # normalized to gridspace gain
         ai = torch.arange(na, device=targets.device).float().view(na, 1).repeat(1, nt)  # same as .repeat_interleave(nt)
-        #print(targets.repeat(na, 1, 1).shape)
-        #print(ai[:, :, None].shape)
+
         targets = torch.cat((targets.repeat(na, 1, 1), ai[:, :, None]), 2)  # append anchor indices
         
         g = 0.5  # bias
@@ -98,12 +130,9 @@ class DetectionLoss(nn.Module):
             t = targets * gain
 
             if nt:
-                # Matches
-                #print(t[:, :, 4:6].shape)
-                #print(anchors[:, None].shape)
                 r = t[:, :, 4:6] / anchors[:, None]  # wh ratio
                 j = torch.max(r, 1. / r).max(2)[0] < self.train_anchor_threshold  # compare
-                # j = wh_iou(anchors, t[:, 4:6]) > model.hyp['iou_t']  # iou(3,n)=wh_iou(anchors(3,2), gwh(n,2))
+
                 t = t[j]  # filter
 
                 # Offsets
@@ -153,7 +182,6 @@ class SegmentationLoss(nn.Module):
 
         targets = torch.argmax(targets, dim = 1)
         masks = torch.unsqueeze(targets, 1)
-        #print(preds.shape)
       
         ious = torch.zeros(preds.shape[0])
         present_classes = torch.zeros(preds.shape[0])
@@ -172,58 +200,6 @@ class SegmentationLoss(nn.Module):
 
         return lseg, liou
 
-
-def smooth_BCE(eps=0.1):  # https://github.com/ultralytics/yolov3/issues/238#issuecomment-598028441
-    # return positive, negative label smoothing BCE targets
-    return 1.0 - 0.5 * eps, 0.5 * eps
-
-def is_parallel(model):
-    return type(model) in (nn.parallel.DataParallel, nn.parallel.DistributedDataParallel)
-
-
-def bbox_iou(box1, box2, x1y1x2y2=True, GIoU=False, DIoU=False, CIoU=False, eps=1e-9):
-    # Returns the IoU of box1 to box2. box1 is 4, box2 is nx4
-    box2 = box2.T
-
-    # Get the coordinates of bounding boxes
-    if x1y1x2y2:  # x1, y1, x2, y2 = box1
-        b1_x1, b1_y1, b1_x2, b1_y2 = box1[0], box1[1], box1[2], box1[3]
-        b2_x1, b2_y1, b2_x2, b2_y2 = box2[0], box2[1], box2[2], box2[3]
-    else:  # transform from xywh to xyxy
-        b1_x1, b1_x2 = box1[0] - box1[2] / 2, box1[0] + box1[2] / 2
-        b1_y1, b1_y2 = box1[1] - box1[3] / 2, box1[1] + box1[3] / 2
-        b2_x1, b2_x2 = box2[0] - box2[2] / 2, box2[0] + box2[2] / 2
-        b2_y1, b2_y2 = box2[1] - box2[3] / 2, box2[1] + box2[3] / 2
-
-    # Intersection area
-    inter = (torch.min(b1_x2, b2_x2) - torch.max(b1_x1, b2_x1)).clamp(0) * \
-            (torch.min(b1_y2, b2_y2) - torch.max(b1_y1, b2_y1)).clamp(0)
-
-    # Union Area
-    w1, h1 = b1_x2 - b1_x1, b1_y2 - b1_y1 + eps
-    w2, h2 = b2_x2 - b2_x1, b2_y2 - b2_y1 + eps
-    union = w1 * h1 + w2 * h2 - inter + eps
-
-    iou = inter / union
-    if GIoU or DIoU or CIoU:
-        cw = torch.max(b1_x2, b2_x2) - torch.min(b1_x1, b2_x1)  # convex (smallest enclosing box) width
-        ch = torch.max(b1_y2, b2_y2) - torch.min(b1_y1, b2_y1)  # convex height
-        if CIoU or DIoU:  # Distance or Complete IoU https://arxiv.org/abs/1911.08287v1
-            c2 = cw ** 2 + ch ** 2 + eps  # convex diagonal squared
-            rho2 = ((b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 +
-                    (b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2) / 4  # center distance squared
-            if DIoU:
-                return iou - rho2 / c2  # DIoU
-            elif CIoU:  # https://github.com/Zzh-tju/DIoU-SSD-pytorch/blob/master/utils/box/box_utils.py#L47
-                v = (4 / math.pi ** 2) * torch.pow(torch.atan(w2 / h2) - torch.atan(w1 / h1), 2)
-                with torch.no_grad():
-                    alpha = v / ((1 + eps) - iou + v)
-                return iou - (rho2 / c2 + v * alpha)  # CIoU
-        else:  # GIoU https://arxiv.org/pdf/1902.09630.pdf
-            c_area = cw * ch + eps  # convex area
-            return iou - (c_area - union) / c_area  # GIoU
-    else:
-        return iou  # IoU
 
 class CombinedLoss(nn.Module):
 

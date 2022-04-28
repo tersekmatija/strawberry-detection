@@ -1,0 +1,32 @@
+# training settings
+batch_size: 2
+epochs: 30
+learning_rate: 0.0001
+dataset_dir: "./data/StrawDI_Db1"
+runs_dir: "runs/" # relative to project dir
+warmup: 'linear'
+warmup_iters: 100
+
+# val
+val_plot_num: 4
+
+# demo
+demo_run: "exp21"
+
+# model settings
+reduction: 2    # by how much reduce the number of channels
+num_classes: 1
+
+# 2 head version only
+#anchors: [[18,21,30,34,43,53,],[52,75,69,87,71,118],[90,135,102,174,131,215]]
+#strides: [8,16,32]
+anchors: [[13,22,  21,35,  31,60], [41,94,  55,129,  73,174]]
+strides: [8,16]
+
+# augmentations
+img_shape: [480, 640]
+blur_p: 0.4
+blur_ks: 10
+flip_p: 0.5
+rotate_p: 15
+min_scale: 0.9
