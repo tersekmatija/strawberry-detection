@@ -132,4 +132,5 @@ data/
 YOLOP/
 runs/*
 
-*.ipynb
+.ipynb
+notebooks/
