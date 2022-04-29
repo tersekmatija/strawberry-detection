@@ -55,7 +55,7 @@ class SPP(nn.Module):
 class Detect(nn.Module):
     stride = None  # strides computed during build
 
-    def __init__(self, nc=1, anchors=(), ch=(), stride=()):  # detection layer
+    def __init__(self, nc=1, anchors=(), ch=(), stride=(), export=False):  # detection layer
         super(Detect, self).__init__()
         self.nc = nc  # number of classes
         self.no = nc + 5  # number of outputs per anchor 85
@@ -67,15 +67,19 @@ class Detect(nn.Module):
         self.register_buffer('anchor_grid', a.clone().view(self.nl, 1, -1, 1, 1, 2))  # shape(nl,1,na,1,1,2)
         self.m = nn.ModuleList(nn.Conv2d(x, self.no * self.na, 1) for x in ch)  # output conv  
         self.stride = stride
+        self.export = export
 
     def forward(self, x):
         z = []  # inference output
         for i in range(self.nl):
             x[i] = self.m[i](x[i])  # conv
-            bs, _, ny, nx = x[i].shape  # x(bs,255,w,w) to x(bs,3,w,w,85)
-            x[i]=x[i].view(bs, self.na, self.no, ny*nx).permute(0, 1, 3, 2).view(bs, self.na, ny, nx, self.no).contiguous()
 
-            if not self.training:  # inference
+            if not self.export:
+                bs, _, ny, nx = x[i].shape  # x(bs,255,w,w) to x(bs,3,w,w,85)
+                x[i]=x[i].view(bs, self.na, self.no, ny*nx).permute(0, 1, 3, 2).view(bs, self.na, ny, nx, self.no).contiguous()
+            else:
+                x[i] = torch.sigmoid(x[i])
+            if not self.training and not self.export:  # inference
                 if self.grid[i].shape[2:4] != x[i].shape[2:4]:
                     self.grid[i] = self._make_grid(nx, ny).to(x[i].device)
                 y = x[i].sigmoid()
@@ -84,7 +88,7 @@ class Detect(nn.Module):
                 y[..., 2:4] = (y[..., 2:4] * 2) ** 2 * self.anchor_grid[i] # ADD ME BACK IF REMOVED DIV IN LOSS* self.stride[i] # wh
 
                 z.append(y.view(bs, -1, self.no))
-        return x if self.training else (torch.cat(z, 1), x)
+        return x if self.training or self.export else (torch.cat(z, 1), x)
 
     def _make_grid(self, nx=20, ny=20):
         yv, xv = torch.meshgrid([torch.arange(ny), torch.arange(nx)])

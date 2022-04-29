@@ -134,3 +134,6 @@ runs/*
 
 .ipynb
 notebooks/
+.onnx
+*.onnx
+output/

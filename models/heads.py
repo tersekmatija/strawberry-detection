@@ -36,7 +36,7 @@ class SegmentationHead(nn.Module):
 
 class DetectionHead(nn.Module):
 
-    def __init__(self, num_classes, anchors, strides, ch = 256):
+    def __init__(self, num_classes, anchors, strides, ch = 256, export=False):
         super(DetectionHead, self).__init__()
 
         self.num_classes = anchors
@@ -56,7 +56,7 @@ class DetectionHead(nn.Module):
             self.c3_3 = C3(ch*2, ch*2, shortcut=False)
             chs = [ch//2, ch, ch*2]
 
-        self.detect = Detect(num_classes, anchors, chs, strides)
+        self.detect = Detect(num_classes, anchors, chs, strides, export)
 
     def forward(self, x, x_prev1, x_prev2):
 
