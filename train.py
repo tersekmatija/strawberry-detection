@@ -14,7 +14,7 @@ from utils.config import load_config
 from utils.draw import draw_overlay
 from utils.schedulers import CosineAnnealingLR
 import utils.augmentations as A
-from datasets.loader import get_loader
+from datasets.loaders import get_loader
 from models.model import Model
 
 parser = argparse.ArgumentParser()
@@ -39,8 +39,8 @@ transforms = A.Compose([
 
 transforms_val = A.Resize(cfg.img_shape)
 
-trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, cfg.batch_size, cfg.collate_fn, transforms=transforms)
-valloader = get_loader(cfg.dataset, "val", cfg.dataset_dir, cfg.batch_size, cfg.collate_fn, transforms=transforms)
+trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, cfg.batch_size, transforms=transforms)
+valloader = get_loader(cfg.dataset, "val", cfg.dataset_dir, cfg.batch_size, transforms=transforms)
 
 
 model = Model(cfg.num_classes, cfg.anchors, cfg.strides, cfg.reduction)

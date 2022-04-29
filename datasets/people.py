@@ -24,11 +24,12 @@ class PeopleDataset(torch.utils.data.Dataset):
         transforms_new = None
         if transforms is not None:
             transforms_new = []
-            for t in transforms:
+            for t in transforms.transforms:
                 if not isinstance(t, A.Resize):
                     warnings.warn(f"Transform {t} not supported. Dropping.")
                 transforms_new.append(t)
-        self.transforms = transforms_new
+        transforms.transforms = transforms_new
+        self.transforms = transforms
 
         # check if "splits.json" exists
         if not os.path.exists(os.path.join(self.root, "splits.json")): raise RuntimeError(f"Not found splits.json in {self.root}!")
@@ -64,7 +65,7 @@ class PeopleDataset(torch.utils.data.Dataset):
             img, mask = self.transforms(img, mask)
         
         # get unique ids and remove bg
-        sem = (mask == 0).all(dim = 0).int()
+        sem = (mask == 0).all(dim = 0).float()
         #print(sem.shape)
         sem = torch.stack([sem, 1-sem]) # bg, cls1
         #print(sem.shape)
