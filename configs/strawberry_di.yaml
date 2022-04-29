@@ -17,7 +17,7 @@ val_plot_num: 4
 demo_run: "exp21"
 
 # model settings
-reduction: 4    # by how much reduce the number of channels
+reduction: 1    # by how much reduce the number of channels
 num_classes: 1
 
 # 2 head version

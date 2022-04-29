@@ -28,7 +28,7 @@ class PeopleDataset(torch.utils.data.Dataset):
                 if not isinstance(t, A.Resize):
                     warnings.warn(f"Transform {t} not supported. Dropping.")
                 transforms_new.append(t)
-        transforms.transforms = transforms_new
+            transforms.transforms = transforms_new
         self.transforms = transforms
 
         # check if "splits.json" exists
