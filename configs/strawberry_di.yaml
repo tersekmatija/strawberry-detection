@@ -17,11 +17,12 @@ demo_run: "exp21"
 reduction: 2    # by how much reduce the number of channels
 num_classes: 1
 
-# 2 head version only
-#anchors: [[18,21,30,34,43,53,],[52,75,69,87,71,118],[90,135,102,174,131,215]]
-#strides: [8,16,32]
-anchors: [[13,22,  21,35,  31,60], [41,94,  55,129,  73,174]]
-strides: [8,16]
+# 2 head version
+anchors: [[18,21,30,34,43,53,],[52,75,69,87,71,118],[90,135,102,174,131,215]]
+strides: [8,16,32]
+# 3 head version
+#anchors: [[13,22,  21,35,  31,60], [41,94,  55,129,  73,174]]
+#strides: [8,16]
 
 # augmentations
 img_shape: [480, 640]

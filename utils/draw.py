@@ -22,7 +22,7 @@ def draw_overlay(img_out, boxes_out, seg_out, show = True):
 
         if len(boxes_out > 0):
             boxes = boxes_out[:, :4].int()
-            print(boxes)
+            #print(boxes)
             img = draw_bounding_boxes(img, boxes, colors="red")
 
     if show:

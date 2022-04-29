@@ -40,10 +40,8 @@ class StrawDIDataset(torch.utils.data.Dataset):
         img = F.convert_image_dtype(img, dtype=torch.float)
         mask = F.convert_image_dtype(mask, dtype=torch.float)
         
-        # TODO: add transform
         if self.transforms is not None:
             img, mask = self.transforms(img, mask)
- 
         
         # get unique ids and remove bg
         obj_ids = torch.unique(mask)

@@ -50,7 +50,7 @@ model = Model(cfg.num_classes, cfg.anchors, cfg.strides, cfg.reduction)
 model.train()
 model.cuda()
 
-criterion = CombinedLoss(cfg.num_classes, model.gr, anchors = cfg.anchors stride=cfg.stride)
+criterion = CombinedLoss(cfg.num_classes, model.gr, anchors = cfg.anchors, stride=cfg.strides)
 
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 iters_per_epoch = len(trainloader)

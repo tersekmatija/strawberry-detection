@@ -39,8 +39,8 @@ if cfg.demo_weights is None:
 state_dict = torch.load(cfg.demo_weights, map_location="cpu")
 #state_dict.pop("det_head.detect.anchor_grid")
 #state_dict.pop("det_head.detect.anchors")
+#print(state_dict.keys())
 
-print(state_dict.keys())
 model.load_state_dict(state_dict)
 model.cuda()
 model.eval()

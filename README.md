@@ -13,9 +13,9 @@ Start a tensorboard with `--logdir runs` to track the training progress and insp
 
 ## TODO
 
-- [] Evaluation script (mAP)
-- [] Export script
-- [] Edge demo
+- [ ] Evaluation script (mAP)
+- [ ] Export script
+- [ ] Edge demo
 
 ## Credits
 
