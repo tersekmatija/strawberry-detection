@@ -7,10 +7,10 @@ def get_loader(dataset_name, split, dataset_dir, batch_size, transforms=None, nu
 
     if dataset_name.lower() == "strawdi":
         dataset = StrawDIDataset(split=split, root=dataset_dir, transforms=transforms)
-        loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=0, collate_fn=StrawDIDataset.collate_fn)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=8, collate_fn=StrawDIDataset.collate_fn)
     elif dataset_name.lower() == "people":
         dataset = PeopleDataset(split=split, root=dataset_dir, transforms=transforms)
-        loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=0, collate_fn=PeopleDataset.collate_fn)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=8, collate_fn=PeopleDataset.collate_fn)
     else:
         raise RuntimeError(f"Dataset {dataset_name} not implemented!")
 
