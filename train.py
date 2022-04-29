@@ -21,6 +21,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-cfg', '--config', type=str, help="Path to training config", required=True)
 args = parser.parse_args()
 
+np.testing.suppress_warnings()
+
 cfg = load_config(args.config)
 
 batch_size = cfg.batch_size

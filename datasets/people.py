@@ -38,6 +38,8 @@ class PeopleDataset(torch.utils.data.Dataset):
         # list of images
         splits = json.load(f)
         self.path_pairs = splits[self.split]
+
+        warnings.filterwarnings("ignore")
         
         
     def __len__(self):
