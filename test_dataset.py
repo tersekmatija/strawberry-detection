@@ -33,7 +33,7 @@ transforms = A.Compose([
 
 trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, 1, transforms=transforms)
 
-writer = SummaryWriter("test_dataset")
+writer = SummaryWriter("runs/test_dataset")
 
 
 with tqdm(total=len(trainloader.dataset), desc ='Demo', unit='chunks') as prog_bar:
