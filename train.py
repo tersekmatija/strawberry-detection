@@ -45,8 +45,8 @@ transforms = A.Compose([
 
 transforms_val = A.Compose([A.Resize(cfg.img_shape)])
 
-trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, cfg.batch_size, transforms=transforms)
-valloader = get_loader(cfg.dataset, "val", cfg.dataset_dir, cfg.batch_size, transforms=transforms_val)
+trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, cfg.batch_size, transforms=transforms, num_workers=cfg.num_workers)
+valloader = get_loader(cfg.dataset, "val", cfg.dataset_dir, 1, transforms=transforms_val, num_workers=cfg.num_workers)
 
 
 model = Model(cfg.num_classes, cfg.anchors, cfg.strides, cfg.reduction)
@@ -147,29 +147,31 @@ for epoch in range(epochs):
     losses = []
     imgs = []
     ious = []
-    for i, data in tqdm(enumerate(valloader)):
-        inputs, labels = data
-        inputs = inputs.cuda()
 
-        optimizer.zero_grad()
-        outputs = model(inputs)
+    with torch.no_grad():
+        for i, data in tqdm(enumerate(valloader)):
+            inputs, labels = data
+            inputs = inputs.cuda()
 
-        labels[0] = labels[0].cuda()
-        labels[1] = labels[1].cuda()
+            optimizer.zero_grad()
+            outputs = model(inputs)
 
-        # compute loss
-        lseg, liou, lbox, lobj, lcls = criterion([outputs[0], outputs[1][1]],labels)
-        loss = lseg + liou + lbox + lobj + lcls
-        losses.append(loss.item())
-        ious.append(1 - liou.item())
+            labels[0] = labels[0].cuda()
+            labels[1] = labels[1].cuda()
 
-        if i in idx_draw:
-            img_out = inputs.detach().cpu()
-            boxes_out = outputs[1][0].detach().cpu()
-            seg_out = outputs[0].detach().cpu()
+            # compute loss
+            lseg, liou, lbox, lobj, lcls = criterion([outputs[0], outputs[1][1]],labels)
+            loss = lseg + liou + lbox + lobj + lcls
+            losses.append(loss.item())
+            ious.append(1 - liou.item())
 
-            img = draw_overlay(img_out[0], boxes_out[0].unsqueeze(0), seg_out[0][1], cfg.thr_conf, cfg.thr_iou, show=False)
-            imgs.append(img)
+            if i in idx_draw:
+                img_out = inputs.detach().cpu()
+                boxes_out = outputs[1][0].detach().cpu()
+                seg_out = outputs[0].detach().cpu()
+
+                img = draw_overlay(img_out[0], boxes_out[0].unsqueeze(0), seg_out[0][1], cfg.thr_conf, cfg.thr_iou, show=False)
+                imgs.append(img)
 
     val_loss = np.mean(losses)
     val_iou = np.mean(ious)

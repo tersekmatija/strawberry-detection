@@ -13,6 +13,7 @@ warmup_iters: 200
 momentum: 0.937
 weight_decay: 0.00005
 pretrained:  #"runs/exp52/best.pt"
+num_workers: 0
 
 decoder: True
 backbone: True
