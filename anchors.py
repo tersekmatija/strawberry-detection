@@ -138,4 +138,4 @@ cfg = load_config(args.config)
 
 trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, 1)
 
-kmean_anchors(trainloader, n = 9)
+kmean_anchors(trainloader, n = 9, img_size = min(cfg.img_shape))

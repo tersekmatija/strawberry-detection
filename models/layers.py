@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from utils.activations import *
+import math
 
 # Adapted from YoloV5
 class Conv(nn.Module):
@@ -66,8 +67,11 @@ class Detect(nn.Module):
         self.register_buffer('anchors', a)  # shape(nl,na,2)
         self.register_buffer('anchor_grid', a.clone().view(self.nl, 1, -1, 1, 1, 2))  # shape(nl,1,na,1,1,2)
         self.m = nn.ModuleList(nn.Conv2d(x, self.no * self.na, 1) for x in ch)  # output conv  
-        self.stride = stride
+        self.stride = torch.Tensor(stride)
         self.export = export
+
+        self.anchors /= self.stride.float().view(-1, 1, 1)
+        self._initialize_biases()
 
     def forward(self, x):
         z = []  # inference output
@@ -93,3 +97,10 @@ class Detect(nn.Module):
     def _make_grid(self, nx=20, ny=20):
         yv, xv = torch.meshgrid([torch.arange(ny), torch.arange(nx)])
         return torch.stack((xv, yv), 2).view((1, 1, ny, nx, 2)).float()
+
+    def _initialize_biases(self, cf=None):
+        for mi, s in zip(self.m, self.stride):  # from
+            b = mi.bias.view(self.na, -1)  # conv.bias(255) to (3,85)
+            b.data[:, 4] += math.log(8 / (640 / s) ** 2)  # obj (8 objects per 640 image)
+            b.data[:, 5:] += math.log(0.6 / (self.nc - 0.99)) if cf is None else torch.log(cf / cf.sum())  # cls
+            mi.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)

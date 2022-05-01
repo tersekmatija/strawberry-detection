@@ -8,7 +8,7 @@ from utils.boxutils import non_max_suppression
 
 
 # expects non batched images
-def draw_overlay(img_out, boxes_out, seg_out, show = True):
+def draw_overlay(img_out, boxes_out, seg_out, thr_conf, thr_iou, show = True):
     
     img = (img_out * 255).type(torch.uint8)
 
@@ -17,7 +17,7 @@ def draw_overlay(img_out, boxes_out, seg_out, show = True):
         img = draw_segmentation_masks(img, seg, alpha=0.8, colors="blue")
 
     if boxes_out is not None:
-        boxes_out = non_max_suppression(boxes_out, conf_thres=0.3, iou_thres=0.3, classes=None, agnostic=False)
+        boxes_out = non_max_suppression(boxes_out, conf_thres=thr_conf, iou_thres=thr_iou)
         boxes_out = boxes_out[0]
 
         if len(boxes_out > 0):

@@ -27,7 +27,8 @@ class PeopleDataset(torch.utils.data.Dataset):
             for t in transforms.transforms:
                 if not isinstance(t, A.Resize):
                     warnings.warn(f"Transform {t} not supported. Dropping.")
-                transforms_new.append(t)
+                else:
+                    transforms_new.append(t)
             transforms.transforms = transforms_new
         self.transforms = transforms
 
@@ -38,6 +39,7 @@ class PeopleDataset(torch.utils.data.Dataset):
         # list of images
         splits = json.load(f)
         self.path_pairs = splits[self.split]
+        #self.path_pairs = self.path_pairs[1:3001] if self.split == "train" else self.path_pairs[3001:3101]
 
         warnings.filterwarnings("ignore")
         
@@ -54,11 +56,11 @@ class PeopleDataset(torch.utils.data.Dataset):
         boxs_path = os.path.join(self.root, pair[2])
         
         # read
-        #print(img_path)
         img = read_image(img_path)
         mask = read_image(mask_path, ImageReadMode.RGB)
         boxs = torch.Tensor(np.genfromtxt(boxs_path,delimiter=' '))
-        
+        boxs = boxs.view(-1, 5)    
+
         # to float
         img = F.convert_image_dtype(img, dtype=torch.float)
         mask = F.convert_image_dtype(mask, dtype=torch.float)
@@ -76,7 +78,6 @@ class PeopleDataset(torch.utils.data.Dataset):
         boxes = torch.ones((boxs.shape[0], 6))
         if len(boxes) > 0:
             boxes[:, 1:] = boxs
-        
         return img, [sem, boxes]
 
     @staticmethod

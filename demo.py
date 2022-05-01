@@ -32,7 +32,7 @@ transforms = A.Compose([
 
 trainloader = get_loader(cfg.dataset, "test", cfg.dataset_dir, 1, transforms=transforms)
 
-model = Model(cfg.num_classes, cfg.anchors, cfg.strides)
+model = Model(cfg.num_classes, cfg.anchors, cfg.strides, cfg.reduction)
 
 if cfg.demo_weights is None:
     raise RuntimeError("Demo run not set!")
