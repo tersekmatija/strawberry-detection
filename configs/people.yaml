@@ -3,7 +3,7 @@
 dataset: "people"
 
 batch_size: 2
-epochs: 30
+epochs: 50
 optimizer: "sgd"
 learning_rate: 0.01
 dataset_dir: "./data/D2-people"

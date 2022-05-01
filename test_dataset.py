@@ -60,7 +60,7 @@ with tqdm(total=len(trainloader.dataset), desc ='Demo', unit='chunks') as prog_b
         img = draw_segmentation_masks(img, seg, alpha=0.8, colors="blue")
 
         img = draw_bounding_boxes(img, boxes_out, colors="red")
-        writer.add_images("train/images", imgs, i)
+        writer.add_images("train/images", img.unsqueeze(0), i)
 
 
         img_show = img.numpy()
