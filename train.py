@@ -45,8 +45,8 @@ transforms = A.Compose([
 
 transforms_val = A.Compose([A.Resize(cfg.img_shape)])
 
-trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, cfg.batch_size, transforms=transforms, num_workers=cfg.num_workers)
-valloader = get_loader(cfg.dataset, "val", cfg.dataset_dir, 1, transforms=transforms_val, num_workers=cfg.num_workers)
+trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, cfg.batch_size, transforms=transforms, num_workers=cfg.num_workers, pin_memory=True)
+valloader = get_loader(cfg.dataset, "val", cfg.dataset_dir, 1, transforms=transforms_val, num_workers=cfg.num_workers, pin_memory=True)
 
 
 model = Model(cfg.num_classes, cfg.anchors, cfg.strides, cfg.reduction)
