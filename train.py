@@ -93,7 +93,7 @@ iters_per_epoch = len(trainloader)
 #    iters_per_epoch, #cfg.epochs * iters_per_epoch,
 #    eta_min = 0)#, warmup = cfg.warmup, warmup_iters = cfg.warmup_iters)
 scheduler = CosineAnnealingLR(optimizer,
-    iters_per_epoch * cfg.epochs // 2, eta_min = 0, warmup = cfg.warmup, warmup_iters = cfg.warmup_iters)
+    iters_per_epoch * cfg.epochs, eta_min = 0, warmup = cfg.warmup, warmup_iters = cfg.warmup_iters)
 #lrf = 0.001
 #lf = lambda x: (1 - x / (epochs * iters_per_epoch)) * (1.0 - lrf) + lrf
 #scheduler = LambdaLR(optimizer, lr_lambda=lf)

@@ -42,19 +42,18 @@ class DetectionHead(nn.Module):
         self.num_classes = anchors
         self.anchors = anchors
         self.strides = strides
-        self.three_heads = len(strides) == 3
-
-        chs = [ch//2, ch]
+        chs = []
 
         self.c3_1 = C3(ch, ch//2, shortcut=False)
+        if 8 in self.strides: chs.append(ch//2)
 
         self.conv_1 = Conv(ch//2, ch//2, 3, 2, p=1)
         self.c3_2 = C3(ch, ch, shortcut=False)
+        if 16 in self.strides: chs.append(ch)
 
-        if self.three_heads:
-            self.conv_2 = Conv(ch, ch, 3, 2, p=1)
-            self.c3_3 = C3(ch*2, ch*2, shortcut=False)
-            chs = [ch//2, ch, ch*2]
+        self.conv_2 = Conv(ch, ch, 3, 2, p=1)
+        self.c3_3 = C3(ch*2, ch*2, shortcut=False)
+        if 32 in self.strides: chs.append(ch*2)
 
         self.detect = Detect(num_classes, anchors, chs, strides, export)
 
@@ -63,14 +62,14 @@ class DetectionHead(nn.Module):
         feats = []
 
         c3_1 = self.c3_1(x)
-        feats.append(c3_1)
+        if 8 in self.strides: feats.append(c3_1)
 
         x = self.conv_1(c3_1)
         x= torch.cat([x, x_prev1], dim = 1)
         c3_2 = self.c3_2(x)
-        feats.append(c3_2)
+        if 16 in self.strides: feats.append(c3_2)
 
-        if self.three_heads:
+        if 32 in self.strides:
             x = self.conv_2(c3_2)
             x = torch.cat([x, x_prev2], dim = 1)
             c3_3 = self.c3_3(x)

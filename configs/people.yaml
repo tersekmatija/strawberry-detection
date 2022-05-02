@@ -3,7 +3,7 @@
 dataset: "people"
 
 batch_size: 2
-epochs: 50
+epochs: 30
 optimizer: "sgd"
 learning_rate: 0.01
 dataset_dir: "./data/D2-people"
@@ -32,18 +32,18 @@ thr_iou: 0.6
 thr_conf: 0.3
 
 # model settings
-reduction: 1    # by how much reduce the number of channels
+reduction: 4    # by how much reduce the number of channels
 num_classes: 1
 
-# 2 head version
-anchors: [[5,26,  7,55,  14,61],  [11,96,  17,114,  21,168],  [31,137,  35,244,  62,320]]
-strides: [8,16,32]
 # 3 head version
-#anchors: [[8,49,  12,104,  23,92],  [21,168,  35,220,  64,377]]
-#strides: [8,16]
+#anchors: [[5,26,  7,55,  14,61],  [11,96,  17,114,  21,168],  [31,137,  35,244,  62,320]]
+#strides: [8,16,32]
+# 2 head version
+anchors: [[5,36,  9,61,  13,109],  [21,94,  23,167,  43,241]]
+strides: [16,32]
 
 # augmentations
-img_shape: [480, 640]
+img_shape: [480, 864]
 blur_p: 0.4
 blur_ks: 10
 flip_p: 0.5

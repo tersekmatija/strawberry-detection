@@ -3,12 +3,17 @@
 dataset: "strawdi"
 
 batch_size: 2
-epochs: 1000
+epochs: 20
+optimizer: "adam"
 learning_rate: 0.0001
 dataset_dir: "./data/StrawDI_Db1"
 runs_dir: "runs/" # relative to project dir
 warmup: 'linear'
-warmup_iters: 100
+warmup_iters: 50
+momentum: 0.937
+weight_decay: 0.00005
+pretrained:  #"runs/exp52/best.pt"
+num_workers: 6
 
 decoder: True
 backbone: True
@@ -23,22 +28,23 @@ w_seg: 0.1
 
 # val
 val_plot_num: 4
-thr_iou: 0.3
+thr_iou: 0.6
 thr_conf: 0.3
 
-# demo
-demo_run: "exp21"
-
 # model settings
-reduction: 1    # by how much reduce the number of channels
+reduction: 2    # by how much reduce the number of channels
 num_classes: 1
 
-# 2 head version
-anchors: [[8,15,  14,23,  20,35],  [26,51,  31,73,  42,60],  [40,95,  49,118,  61,151]]
-strides: [8,16,32]
+
 # 3 head version
-#anchors: [[13,22,  21,35,  31,60], [41,94,  55,129,  73,174]]
-#strides: [8,16]
+#anchors: [[8,15,  14,23,  20,35],  [26,51,  31,73,  42,60],  [40,95,  49,118,  61,151]]
+#strides: [8,16,32]
+# 2 head version
+anchors: [[13,22,  21,35,  31,60], [41,94,  55,129,  73,174]]
+strides: [8, 16]#[16,32]
+# 1 head version
+# anchors: [[10,17,  19,33,  28,56,  37,87,  51,125]]
+# strides: [32]
 
 # augmentations
 img_shape: [480, 640]
@@ -47,3 +53,6 @@ blur_ks: 10
 flip_p: 0.5
 rotate_p: 15
 min_scale: 0.9
+
+# demo
+demo_run: "exp63" # 62 is 16,32; 63 is 32

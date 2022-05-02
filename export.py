@@ -26,7 +26,8 @@ args = parser.parse_args()
 
 cfg = load_config(args.config)
 
-model = Model(cfg.num_classes, cfg.anchors, cfg.strides, export=True)
+model = Model(cfg.num_classes, cfg.anchors, cfg.strides, cfg.reduction, export=True)
+
 
 if cfg.demo_weights is None:
     raise RuntimeError("Demo run not set!")
