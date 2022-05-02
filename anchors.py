@@ -132,10 +132,12 @@ def kmean_anchors(loader, n=9, img_size=640, thr=4.0, gen=1000, verbose=True, ma
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-cfg', '--config', type=str, help="Path to training config", required=True)
+parser.add_argument('-n', '--num_anchors', type=int, help="Number of anchors", required=True)
+
 args = parser.parse_args()
 
 cfg = load_config(args.config)
 
 trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, 1)
 
-kmean_anchors(trainloader, n = 5, img_size = min(cfg.img_shape))
+kmean_anchors(trainloader, args.num_anchors, img_size = min(cfg.img_shape))
