@@ -18,12 +18,12 @@ from torch.utils.tensorboard import SummaryWriter
 
 from utils.loss import CombinedLoss
 from utils.config import load_config
-from datasets.strawberrydi import StrawDIDataset
 from models.model import Model
+from datasets.loaders import get_loader
 
 
 # Adapted from YoloV5
-def kmean_anchors(loader, n=9, img_size=640, thr=4.0, gen=1000, verbose=True):
+def kmean_anchors(loader, n=9, img_size=640, thr=4.0, gen=1000, verbose=True, max_limit=5000):
     """ Creates kmeans-evolved anchors from training dataset
 
         Arguments:
@@ -65,10 +65,13 @@ def kmean_anchors(loader, n=9, img_size=640, thr=4.0, gen=1000, verbose=True):
 
     shapes = []
     labels = []
-    for img, labs in loader:
+    opened = 0
+    for img, labs in tqdm(loader):
+        if opened > max_limit: break
         labels.append(labs[1])
         for i in range(len(labs[1])):
             shapes.append(img.shape[2:])
+        opened += 1
     labels = np.vstack(labels)
     shapes = np.array(shapes)
     #if not (labels[:, 1:] <= 1).all():
@@ -133,7 +136,6 @@ args = parser.parse_args()
 
 cfg = load_config(args.config)
 
-train_dataset = StrawDIDataset(split="train", root=cfg.dataset_dir)
-trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=1, num_workers=4, collate_fn=StrawDIDataset.collate_fn)
+trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, 1)
 
-kmean_anchors(trainloader, n = 6)
+kmean_anchors(trainloader, n = 5, img_size = min(cfg.img_shape))

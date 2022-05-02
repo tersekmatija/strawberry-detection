@@ -16,6 +16,7 @@ from utils.boxutils import non_max_suppression
 import utils.augmentations as A
 from datasets.strawberrydi import StrawDIDataset
 from models.model import Model
+from datasets.loaders import get_loader
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-cfg', '--config', type=str, help="Path to training config", required=True)
@@ -29,10 +30,9 @@ transforms = A.Compose([
     A.Resize(cfg.img_shape)
 ])
 
-train_dataset = StrawDIDataset(split="test", root=cfg.dataset_dir, transforms=transforms)
-trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, num_workers=0, collate_fn=StrawDIDataset.collate_fn)
+trainloader = get_loader(cfg.dataset, "test", cfg.dataset_dir, 1, transforms=transforms)
 
-model = Model(cfg.num_classes, cfg.anchors, cfg.strides)
+model = Model(cfg.num_classes, cfg.anchors, cfg.strides, cfg.reduction)
 
 if cfg.demo_weights is None:
     raise RuntimeError("Demo run not set!")
@@ -56,6 +56,7 @@ with tqdm(total=len(trainloader.dataset), desc ='Demo', unit='chunks') as prog_b
         boxes_out = outputs[1][0].detach().cpu()
         seg_out = outputs[0].detach().cpu()
 
+        #print(boxes_out)
         for idx in range(batch_size):
             draw_overlay(img_out[idx], boxes_out[idx].unsqueeze(0), seg_out[idx][1])
 

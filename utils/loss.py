@@ -53,23 +53,24 @@ def bbox_iou(box1, box2, x1y1x2y2=True, GIoU=False, DIoU=False, CIoU=False, eps=
 
 class DetectionLoss(nn.Module):
 
-    def __init__(self, nc, gr, anchors = (), train_anchor_threshold = 4.0, balance = [4.0, 1.0, 0.4], stride = [8, 16, 32]):
+    def __init__(self, nc, gr, anchors = (), train_anchor_threshold = 4.0, balance = [4.0, 1.0, 0.4], stride = [8, 16, 32], device = torch.device("cpu")):
         super(DetectionLoss, self).__init__()
         self.train_anchor_threshold = train_anchor_threshold
         self.na = len(anchors[0]) // 2
         self.nl = len(anchors)
-        print("NL"+str(self.nl))
         self.gr = gr
         self.nc = nc
 
+        #self.anchors = anchors
         self.anchors = torch.tensor(anchors).float().view(self.nl, -1, 2) / torch.Tensor(stride).float().view(-1, 1, 1)
         self.balance = balance
 
         self.bce = nn.BCEWithLogitsLoss()
+        self.device = device
 
     # calculate detection loss
     def forward(self, predictions, targets):
-        device = targets[0].device
+        device = self.device
         lcls, lbox, lobj = torch.zeros(1, device=device), torch.zeros(1, device=device), torch.zeros(1, device=device)
         tcls, tbox, indices, anchors = self.build_targets(predictions, targets)  # targets
 
@@ -109,7 +110,6 @@ class DetectionLoss(nn.Module):
 
     def build_targets(self, predictions, targets):
 
-        self.anchors = self.anchors.to(targets.device)
         na, nt = self.na, targets.shape[0]  # number of anchors, targets
         tcls, tbox, indices, anch = [], [], [], []
         gain = torch.ones(7, device=targets.device)  # normalized to gridspace gain
@@ -124,11 +124,10 @@ class DetectionLoss(nn.Module):
                             ], device=targets.device).float() * g  # offsets
         
         for i in range(self.nl):
-            anchors = self.anchors[i] #[3,2]
+            anchors = self.anchors[i].to(targets.device) #[3,2]
             gain[2:6] = torch.tensor(predictions[i].shape)[[3, 2, 3, 2]]  # xyxy gain
             # Match targets to anchors
             t = targets * gain
-
             if nt:
                 r = t[:, :, 4:6] / anchors[:, None]  # wh ratio
                 j = torch.max(r, 1. / r).max(2)[0] < self.train_anchor_threshold  # compare
@@ -203,23 +202,27 @@ class SegmentationLoss(nn.Module):
 
 class CombinedLoss(nn.Module):
 
-    def __init__(self, nc, gr, anchors = (), train_anchor_threshold = 4.0, balance = [4.0, 1.0, 0.4], stride=[8, 16, 32]):
+    def __init__(self, cfg, nc, gr, anchors = (), train_anchor_threshold = 4.0, balance = [4.0, 1.0, 0.4], stride=[8, 16, 32], device = torch.device("cpu")):
         super(CombinedLoss, self).__init__()
+        #anchors = model.det_head.detect.anchors
         self.train_anchor_threshold = train_anchor_threshold
         self.na = len(anchors[0]) // 2
         self.nl = len(anchors)
         self.gr = gr
         self.nc = nc
-        self.anchors = torch.tensor(anchors).float().view(self.nl, -1, 2)
+        #self.anchors = torch.tensor(anchors).float().view(self.nl, -1, 2)
         self.balance = balance
         self.stride = stride
 
+        self.cfg = cfg
+
         self.seg_loss = SegmentationLoss(nc)
-        self.det_loss = DetectionLoss(nc, gr, anchors=anchors, stride=stride)
+        self.det_loss = DetectionLoss(nc, gr, anchors=anchors, stride=stride, device=device)
 
     def forward(self, predictions, targets):
 
+        cfg = self.cfg
         lseg, liou = self.seg_loss(predictions[0], targets[0])
         lbox, lobj, lcls = self.det_loss(predictions[1], targets[1])
 
-        return lseg, liou, lbox, lobj, lcls
+        return cfg.w_seg * lseg, cfg.w_iou * liou, cfg.w_box * lbox, cfg.w_obj * lobj, cfg.w_cls * lcls #lbox default 0.05

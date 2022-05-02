@@ -13,11 +13,13 @@ args = parser.parse_args()
 
 cfg = load_config(args.config)
 
-inp = torch.rand(1, 3, *cfg.img_shape)
+#inp = torch.rand(1, 3, *cfg.img_shape)
+inp = torch.rand(1, 3, 128, 128)
 print(inp.shape)
 print(cfg)
 model = Model(cfg.num_classes, cfg.anchors, cfg.strides, cfg.reduction)
-model.eval()
+#model.eval()
+model.train()
 
 flops = FlopCountAnalysis(model, inp)
 print(flop_count_table(flops, max_depth=1))
