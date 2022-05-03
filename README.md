@@ -1,4 +1,6 @@
-# Strawberry detection
+https://user-images.githubusercontent.com/56075061/166344196-dbc344b8-e050-443d-9aa7-9520fe90c8ef.png
+
+# :strawberry: Strawberry detection :heavy_plus_sign: segmentation 
 
 Model is based on YOLOP, which consist of a mutual encoder/decoder like structure, with detection and segmentation head.
 
