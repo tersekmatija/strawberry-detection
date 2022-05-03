@@ -1,4 +1,4 @@
-![https://user-images.githubusercontent.com/56075061/166344196-dbc344b8-e050-443d-9aa7-9520fe90c8ef.png]
+![image](https://user-images.githubusercontent.com/56075061/166344196-dbc344b8-e050-443d-9aa7-9520fe90c8ef.png)
 
 # :strawberry: Strawberry detection :heavy_plus_sign: segmentation 
 
