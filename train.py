@@ -59,7 +59,7 @@ if cfg.pretrained is not None:
     pretrained_dict = torch.load(cfg.pretrained, map_location="cpu")
     model_dict = model.state_dict()
     pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-    print(f"Skipping when loading: {[k for k in pretrained_dict.items() if k not in model_dict]}")
+    print(f"Skipping when loading: {[k for k in pretrained_dict.keys() if k not in model_dict]}")
     model_dict.update(pretrained_dict) 
     model.load_state_dict(pretrained_dict)
 
