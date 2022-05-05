@@ -36,11 +36,11 @@ reduction: 4    # by how much reduce the number of channels
 num_classes: 1
 
 # 3 head version
-#anchors: [[5,26,  7,55,  14,61],  [11,96,  17,114,  21,168],  [31,137,  35,244,  62,320]]
-#strides: [8,16,32]
+anchors: [[9,6, 7,3, 5,27,  7,56,  15,51],  [25,9, 33,23, 11,95,  18,107,  20,166],  [61,25, 78,63, 32,142,  37,244,  66,336]]
+strides: [8,16,32]
 # 2 head version
-anchors: [[5,36,  9,61,  13,109],  [21,94,  23,167,  43,241]]
-strides: [16,32]
+#anchors: [[5,36,  9,61,  13,109],  [21,94,  23,167,  43,241]]
+#strides: [16,32]
 
 # augmentations
 img_shape: [480, 864]

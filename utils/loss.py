@@ -184,7 +184,7 @@ class SegmentationLoss(nn.Module):
       
         ious = torch.zeros(preds.shape[0])
         present_classes = torch.zeros(preds.shape[0])
-        for cls in range(self.nc):
+        for cls in range(self.nc+1):
             masks_c = masks == cls
             outputs_c = preds == cls
             TP = torch.sum(torch.logical_and(masks_c, outputs_c), dim = [1, 2, 3]).cpu()

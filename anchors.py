@@ -90,6 +90,11 @@ def kmean_anchors(loader, n=9, img_size=640, thr=4.0, gen=1000, verbose=True, ma
               '%g of %g labels are < 3 pixels in width or height.' % (i, len(wh0)))
     wh = wh0[(wh0 >= 2.0).any(1)]  # filter > 2 pixels
 
+    wh1 = wh[wh[:,0] > 2*wh[:,1]]
+    s1 = wh1.std(0)  # sigmas for whitening
+    k1, dist1 = kmeans(wh1 / s1, 3, iter=30) 
+    k1 *= s1
+
     # Kmeans calculation
     print('Running kmeans for %g anchors on %g points...' % (n, len(wh)))
     s = wh.std(0)  # sigmas for whitening
@@ -97,6 +102,8 @@ def kmean_anchors(loader, n=9, img_size=640, thr=4.0, gen=1000, verbose=True, ma
     k *= s
     wh = torch.tensor(wh, dtype=torch.float32)  # filtered
     wh0 = torch.tensor(wh0, dtype=torch.float32)  # unfiltered
+    wh1 = torch.tensor(wh1, dtype=torch.float32)
+    print_results(k1)
     k = print_results(k)
 
     # Plot
@@ -138,4 +145,4 @@ cfg = load_config(args.config)
 
 trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, 1)
 
-kmean_anchors(trainloader, n = 5, img_size = min(cfg.img_shape))
+kmean_anchors(trainloader, n = 9, img_size = min(cfg.img_shape), max_limit=5000)
