@@ -5,7 +5,7 @@ import json
 
 import torchvision
 import torchvision.transforms.functional as F
-from torchvision.io import read_image
+from torchvision.io import read_image, ImageReadMode
 from torchvision.utils import draw_segmentation_masks, draw_bounding_boxes
 from torchvision.ops import masks_to_boxes, box_convert
 
@@ -49,7 +49,7 @@ class COCOPeopleDataset(torch.utils.data.Dataset):
         mask_path = os.path.join(self.data_path, fn_mask)
         
         # read
-        img = read_image(img_path)
+        img = read_image(img_path, ImageReadMode.RGB)
         mask = read_image(mask_path)
         
         # to float
