@@ -67,6 +67,31 @@ class RandomCrop():
         mask = mask[:, y1:y1+h, x1:x1+h]
         
         return image, mask
+
+class RandomCropToAspect():
+    def __init__(self, shape):
+        self.shape = shape
+        
+    def __call__(self, image, mask):
+        h, w = self.shape
+        ratio = h / w
+        
+        h_img, w_img = image.shape[1], image.shape[2]
+        ratio_img = h_img / w_img
+        
+        if ratio_img > ratio:
+            # height in image is bigger and should be reduced
+            h_new = int(h * w_img / w)
+            y = random.randint(0, h_img - h_new)
+            image = image[:, y:y+h_new, :]
+            mask = mask[:, y:y+h_new, :]
+        else:
+            w_new = int(w * h_img / h)
+            x = random.randint(0, w_img - w_new)
+            image = image[:, :, x:x+w_new]
+            mask = mask[:, :, x:x+w_new]
+            
+        return image, mask
     
 class Resize():
     def __init__(self, shape):

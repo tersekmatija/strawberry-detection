@@ -39,6 +39,7 @@ transforms = A.Compose([
     A.RandomGaussianBlur(cfg.blur_p, cfg.blur_ks),
     A.RandomHFlip(cfg.flip_p),
     A.RandomRotate(cfg.rotate_p),
+    A.RandomCropToAspect(cfg.img_shape),
     A.RandomCrop(cfg.min_scale),
     A.Resize(cfg.img_shape)
 ])

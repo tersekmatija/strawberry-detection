@@ -21,6 +21,8 @@ from utils.config import load_config
 from models.model import Model
 from datasets.loaders import get_loader
 
+import utils.augmentations as A
+
 
 # Adapted from YoloV5
 def kmean_anchors(loader, n=9, img_size=640, thr=4.0, gen=1000, verbose=True, max_limit=5000):
@@ -90,7 +92,7 @@ def kmean_anchors(loader, n=9, img_size=640, thr=4.0, gen=1000, verbose=True, ma
               '%g of %g labels are < 3 pixels in width or height.' % (i, len(wh0)))
     wh = wh0[(wh0 >= 2.0).any(1)]  # filter > 2 pixels
 
-    wh1 = wh[wh[:,0] > 2*wh[:,1]]
+    wh1 = wh[wh[:,0] > wh[:,1]]
     s1 = wh1.std(0)  # sigmas for whitening
     k1, dist1 = kmeans(wh1 / s1, 3, iter=30) 
     k1 *= s1
@@ -142,7 +144,11 @@ parser.add_argument('-cfg', '--config', type=str, help="Path to training config"
 args = parser.parse_args()
 
 cfg = load_config(args.config)
+transforms = A.Compose([
+    A.RandomCropToAspect(cfg.img_shape),
+    A.Resize(cfg.img_shape)
+])
 
-trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, 1)
+trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, 1, transforms=transforms)
 
 kmean_anchors(trainloader, n = 9, img_size = min(cfg.img_shape), max_limit=5000)

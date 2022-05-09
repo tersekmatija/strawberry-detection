@@ -28,6 +28,7 @@ args = parser.parse_args()
 cfg = load_config(args.config)
 
 transforms = A.Compose([
+    A.RandomCropToAspect(cfg.img_shape),
     A.Resize(cfg.img_shape)
 ])
 
