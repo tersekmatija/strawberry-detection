@@ -29,10 +29,10 @@ cfg = load_config(args.config)
 
 transforms = A.Compose([
     A.RandomCropToAspect(cfg.img_shape),
-    A.Resize(cfg.img_shape)
+    #A.Resize(cfg.img_shape)
 ])
 
-trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, 1, transforms=transforms)
+trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, 1, transforms=transforms, shuffle=True)
 
 writer = SummaryWriter("runs/test_dataset")
 
