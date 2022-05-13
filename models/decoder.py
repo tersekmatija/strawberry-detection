@@ -8,7 +8,7 @@ class YoloPC3Decoder(nn.Module):
 
     def __init__(self, ch = 512):
         super(YoloPC3Decoder, self).__init__()
-        self.c3u_1 = C3(ch, ch, shortcut = False)
+        #self.c3u_1 = C3(ch, ch, shortcut = False)
         self.conv_1 = Conv(ch, ch // 2, 1, 1)
         self.up1 = nn.UpsamplingBilinear2d(scale_factor = 2)
 
@@ -17,7 +17,7 @@ class YoloPC3Decoder(nn.Module):
         self.up2 = nn.UpsamplingBilinear2d(scale_factor = 2)
 
     def forward(self, x, x_prev1, x_prev2):
-        x = self.c3u_1(x)
+        #x = self.c3u_1(x)
         c1 = self.conv_1(x)
         x = self.up1(c1)
 

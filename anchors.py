@@ -21,6 +21,8 @@ from utils.config import load_config
 from models.model import Model
 from datasets.loaders import get_loader
 
+import matplotlib.pyplot as plt
+
 import utils.augmentations as A
 
 
@@ -83,8 +85,12 @@ def kmean_anchors(loader, n=9, img_size=640, thr=4.0, gen=1000, verbose=True, ma
     # Get label wh
     labels = labels[:, 1:] #drop img id
     shapes = img_size * shapes / shapes.max()
+    shapes = shapes[:, [1,0]] # switch order w, h instead of h,w
     # wh0 = np.concatenate([l[:, 3:5] * shapes for l in labels])  # wh
+    print(labels[:5])
+    print(shapes[:5])
     wh0 = labels[:, 3:5] * shapes
+    print(wh0[:5])
     # Filter
     i = (wh0 < 3.0).any(1).sum()
     if i:
@@ -109,16 +115,19 @@ def kmean_anchors(loader, n=9, img_size=640, thr=4.0, gen=1000, verbose=True, ma
     k = print_results(k)
 
     # Plot
-    # k, d = [None] * 20, [None] * 20
-    # for i in tqdm(range(1, 21)):
-    #     k[i-1], d[i-1] = kmeans(wh / s, i)  # points, mean distance
-    # fig, ax = plt.subplots(1, 2, figsize=(14, 7), tight_layout=True)
-    # ax = ax.ravel()
-    # ax[0].plot(np.arange(1, 21), np.array(d) ** 2, marker='.')
-    # fig, ax = plt.subplots(1, 2, figsize=(14, 7))  # plot wh
-    # ax[0].hist(wh[wh[:, 0]<100, 0],400)
-    # ax[1].hist(wh[wh[:, 1]<100, 1],400)
-    # fig.savefig('wh.png', dpi=200)
+    """
+    k, d = [None] * 20, [None] * 20
+    for i in tqdm(range(1, 21)):
+        k[i-1], d[i-1] = kmeans(wh / s, i)  # points, mean distance
+    fig, ax = plt.subplots(1, 2, figsize=(14, 7), tight_layout=True)
+    ax = ax.ravel()
+    ax[0].plot(np.arange(1, 21), np.array(d) ** 2, marker='.')
+    fig, ax = plt.subplots(1, 2, figsize=(14, 7))  # plot wh
+    ax[0].hist(wh[wh[:, 0]<100, 0],400)
+    ax[1].hist(wh[wh[:, 1]<100, 1],400)
+    #plt.show()
+    fig.savefig('wh.png', dpi=200)
+    """
 
     # Evolve
     npr = np.random
@@ -151,4 +160,4 @@ transforms = A.Compose([
 
 trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, 1, transforms=transforms, shuffle=True)
 
-kmean_anchors(trainloader, n = 9, img_size = min(cfg.img_shape), max_limit=10000)
+kmean_anchors(trainloader, n = 9, img_size = max(cfg.img_shape), max_limit=100)#00)
