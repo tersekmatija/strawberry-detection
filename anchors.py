@@ -160,4 +160,4 @@ transforms = A.Compose([
 
 trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, 1, transforms=transforms, shuffle=True)
 
-kmean_anchors(trainloader, n = 9, img_size = max(cfg.img_shape), max_limit=100)#00)
+kmean_anchors(trainloader, n = 9, img_size = max(cfg.img_shape), max_limit=10000)

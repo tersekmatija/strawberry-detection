@@ -5,14 +5,14 @@ dataset: "cocopeople"
 batch_size: 2
 epochs: 30
 optimizer: "sgd" #"adam"
-learning_rate: 0.001 #0.0005
+learning_rate: 0.01 #0.0005
 dataset_dir: "/home/matija/fiftyone/coco-2017"
 runs_dir: "runs/" # relative to project dir
 warmup: 'linear'
 warmup_iters: 200
 momentum: 0.937
 weight_decay: 0.00005
-pretrained:  #"runs/exp52/best.pt"
+pretrained:  "runs/peoplesanspeople_pretrained/best.pt"
 num_workers: 0
 
 decoder: True
@@ -39,8 +39,8 @@ num_classes: 1
 #anchors: [[9,6, 7,3, 5,27,  7,56,  15,51],  [25,9, 33,23, 11,95,  18,107,  20,166],  [61,25, 78,63, 32,142,  37,244,  66,336]]
 #strides: [8,16,32]
 # 3 head version - coco
-#anchors: [[9,3, 17,11, 2,19,  6,31,  9,68],  [51,15, 80,56, 16,85,  18,163,  36,150],  [153,50, 182,146, 38,294,  69,340,  143,436]]    
-#strides: [8,16,32]
+anchors: [[9,19,  19,33,  26,66, 72,22],  [53,78,  58,155,  124,143,  304,103],  [106,277,  200,334,  391,411,  639,249]]    
+strides: [8,16,32]
 # 2 head version
 #anchors: [[5,36,  9,61,  13,109],  [21,94,  23,167,  43,241]]
 #strides: [16,32]
