@@ -58,7 +58,7 @@ with tqdm(total=len(trainloader.dataset), desc ='Demo', unit='chunks') as prog_b
 
         #print(boxes_out)
         for idx in range(batch_size):
-            draw_overlay(img_out[idx], boxes_out[idx].unsqueeze(0), seg_out[idx][1])
+            draw_overlay(img_out[idx], boxes_out[idx].unsqueeze(0), seg_out[idx][1], cfg.thr_conf, cfg.thr_iou)
 
 
         prog_bar.set_postfix(**{'run:': cfg.demo_run})

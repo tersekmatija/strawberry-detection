@@ -103,8 +103,8 @@ class Detect(nn.Module):
             if not self.training and not self.export:  # inference
                 if self.grid[i].shape[2:4] != x[i].shape[2:4]:
                     self.grid[i] = self._make_grid(nx, ny).to(x[i].device)
-                print(f"{x[i].shape} {self.grid[i].shape} {self.stride[i]}, {self.anchor_grid[i].shape}")
-                print(self.grid[i])
+                #print(f"{x[i].shape} {self.grid[i].shape} {self.stride[i]}, {self.anchor_grid[i].shape}")
+                #print(self.grid[i])
                 # TODO: Check why grid different in YoloV5
                 y = x[i].sigmoid()
 
