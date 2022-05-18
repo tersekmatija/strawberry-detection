@@ -40,7 +40,7 @@ transforms = A.Compose([
     A.RandomHFlip(cfg.flip_p),
     A.RandomRotate(cfg.rotate_p),
     A.RandomCropToAspect(cfg.img_shape),
-    A.RandomCrop(cfg.min_scale),
+    #A.RandomCrop(cfg.min_scale),
     A.Resize(cfg.img_shape)
 ])
 
@@ -96,14 +96,11 @@ else:
     raise RuntimeError(f"Optimizer {cfg.optimizer} not supported.")
 
 iters_per_epoch = len(trainloader)
-#scheduler = CosineAnnealingLR(optimizer,
-#    iters_per_epoch, #cfg.epochs * iters_per_epoch,
-#    eta_min = 0)#, warmup = cfg.warmup, warmup_iters = cfg.warmup_iters)
+
 scheduler = CosineAnnealingLR(optimizer,
     iters_per_epoch * cfg.epochs, eta_min = 0, warmup = cfg.warmup, warmup_iters = cfg.warmup_iters)
-#lrf = 0.001
-#lf = lambda x: (1 - x / (epochs * iters_per_epoch)) * (1.0 - lrf) + lrf
-#scheduler = LambdaLR(optimizer, lr_lambda=lf)
+#lf = lambda x: (1 - x / epochs) * (1.0 - 0.01) + 0.01  # linear
+#scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
 
 writer = SummaryWriter(cfg.save_dir)
 
@@ -147,7 +144,7 @@ for epoch in range(epochs):
             prog_bar.set_postfix(**{'run:': "model_name",
                                      **{key.split("/")[1] : value for key,value in logs.items()}})
             prog_bar.update(batch_size)
-    
+
     # validate
     model.eval()
     idx_draw = random.sample(range(len(valloader)), min(len(valloader),cfg.val_plot_num))
