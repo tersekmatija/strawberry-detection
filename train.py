@@ -42,6 +42,7 @@ transforms = A.Compose([
     A.RandomCropToAspect(cfg.img_shape),
     A.AutoContrast(),
     A.ColorJitter(),
+    A.Occlusion(),
     #A.RandomCrop(cfg.min_scale),
     A.Resize(cfg.img_shape)
 ])

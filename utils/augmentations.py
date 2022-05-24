@@ -144,3 +144,11 @@ class AutoContrast():
     def __call__(self, image, mask):
         image = self.transform(image)
         return image, mask
+
+class Occlusion():
+    def __init__(self):
+        self.transform = torchvision.transforms.RandomErasing(p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=127)
+    
+    def __call__(self, image, mask):
+        image = self.transform(image)
+        return image, mask
