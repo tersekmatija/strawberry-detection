@@ -5,19 +5,19 @@ dataset: "cocopeople"
 batch_size: 16
 epochs: 300
 optimizer: "sgd" #"adam"
-learning_rate: 0.01 #0.0005
-dataset_dir: "/home/matija/fiftyone/coco-2017"
+learning_rate: 0.005 #0.0005
+dataset_dir: "/home/paperspace/fiftyone/coco-2017"
 runs_dir: "runs/" # relative to project dir
 warmup: 'linear'
-warmup_iters: 2000
+warmup_iters: 5000
 momentum: 0.937
 weight_decay: 0.0005
-pretrained:  #"runs/peoplesanspeople_pretrained/best.pt"
-num_workers: 0
+pretrained:  "runs/exp37/best.pt"
+num_workers: 6
 
 decoder: True
 backbone: True
-head_seg: False
+head_seg: True
 head_det: True
 
 w_box: 0.05
@@ -36,7 +36,7 @@ reduction: 2    # by how much reduce the number of channels
 num_classes: 1
 
 # 3 head version - pretrained directly
-anchors: [[10,13,16,30,33,23],[30,61,62,45,59,119],[116,90,156,198,373, 326]]
+anchors: [[10,13,16,30,33,23,36,57,64,22],[30,61,62,45,59,119,394,487,232,80],[116,90,156,198,373, 326,394,487,484,182]]
 strides: [8,16,32]
 # 3 head version - coco
 # anchors: [[9,19,  19,35,  26,66, 72,22],  [53,90,  66,185,  124,143,  286,95],  [126,302,  245,396,  440,417,  603,226]]    
@@ -54,4 +54,4 @@ rotate_p: 15
 min_scale: 0.9
 
 # demo
-demo_run: "cocotrained"
+demo_run: "exp37"

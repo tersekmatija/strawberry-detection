@@ -13,7 +13,7 @@ import numpy as np
 from utils.loss import CombinedLoss
 from utils.config import load_config
 from utils.draw import draw_overlay
-from utils.schedulers import CosineAnnealingLR
+from utils.schedulers import CosineAnnealingLR, LinearLR
 from torch.optim.lr_scheduler import LambdaLR#CosineAnnealingLR
 import utils.augmentations as A
 from datasets.loaders import get_loader
@@ -40,6 +40,8 @@ transforms = A.Compose([
     A.RandomHFlip(cfg.flip_p),
     A.RandomRotate(cfg.rotate_p),
     A.RandomCropToAspect(cfg.img_shape),
+    A.AutoContrast(),
+    A.ColorJitter(),
     #A.RandomCrop(cfg.min_scale),
     A.Resize(cfg.img_shape)
 ])
@@ -97,10 +99,10 @@ else:
 
 iters_per_epoch = len(trainloader)
 
-scheduler = CosineAnnealingLR(optimizer,
-    iters_per_epoch * cfg.epochs, eta_min = 0, warmup = cfg.warmup, warmup_iters = cfg.warmup_iters)
-#lf = lambda x: (1 - x / epochs) * (1.0 - 0.01) + 0.01  # linear
-#scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
+#scheduler = CosineAnnealingLR(optimizer,
+#    iters_per_epoch * cfg.epochs, eta_min = 0, warmup = cfg.warmup, warmup_iters = cfg.warmup_iters)
+scheduler = LinearLR(optimizer,
+    iters_per_epoch * cfg.epochs, eta_min = 0, warmup = cfg.warmup, warmup_iters = cfg.warmup_iters)#scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
 
 writer = SummaryWriter(cfg.save_dir)
 

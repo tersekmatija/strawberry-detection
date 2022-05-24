@@ -128,3 +128,19 @@ class Resize():
         mask = TF.resize(mask, self.shape, interpolation=InterpolationMode.NEAREST)
         
         return image, mask
+
+class ColorJitter():
+    def __init__(self):
+        self.transform = torchvision.transforms.ColorJitter(brightness=0.8, contrast=0.5, saturation=0.5, hue=0.3)
+        
+    def __call__(self, image, mask):
+        image = self.transform(image)
+        return image, mask
+
+class AutoContrast():
+    def __init__(self):
+        self.transform = torchvision.transforms.RandomAutocontrast(p=0.5)
+        
+    def __call__(self, image, mask):
+        image = self.transform(image)
+        return image, mask

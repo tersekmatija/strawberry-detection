@@ -55,6 +55,7 @@ with tqdm(total=len(trainloader.dataset), desc ='Demo', unit='chunks') as prog_b
         img_out = inputs.detach().cpu()
         boxes_out = outputs[1][0].detach().cpu()
         seg_out = outputs[0].detach().cpu()
+        print(seg_out.shape)
 
         #print(boxes_out)
         for idx in range(batch_size):

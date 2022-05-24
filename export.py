@@ -29,12 +29,11 @@ cfg = load_config(args.config)
 model = Model(cfg.num_classes, cfg.anchors, cfg.strides, cfg.reduction, export=True)
 
 
-#if cfg.demo_weights is None:
-#    raise RuntimeError("Demo run not set!")
-#state_dict = torch.load(cfg.demo_weights, map_location="cpu")
+if cfg.demo_weights is None:
+    raise RuntimeError("Demo run not set!")
+state_dict = torch.load(cfg.demo_weights, map_location="cpu")
+model.load_state_dict(state_dict)
 
-
-#model.load_state_dict(state_dict)
 model.cpu()
 model.eval()
 
