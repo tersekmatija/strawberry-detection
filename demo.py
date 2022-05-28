@@ -42,8 +42,14 @@ state_dict = torch.load(cfg.demo_weights, map_location="cpu")
 #print(state_dict.keys())
 
 model.load_state_dict(state_dict)
+
+
 model.cuda()
 model.eval()
+
+import matplotlib.pyplot as plt
+plt.hist(model.det_head.detect.m[0].bias.cpu().detach().numpy())
+plt.show()
 
 with tqdm(total=len(trainloader.dataset), desc ='Demo', unit='chunks') as prog_bar:
     for i, data in enumerate(trainloader):

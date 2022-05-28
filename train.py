@@ -67,6 +67,13 @@ if cfg.pretrained is not None:
     model_dict.update(pretrained_dict) 
     model.load_state_dict(model_dict)
 
+    if cfg.reset_bias:
+        print("Resetting bias on pretrained model!")
+        for m in model.det_head.detect.m:
+            fan_in, _ = torch.nn.init._calculate_fan_in_and_fan_out(m.weight)
+            bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
+            torch.nn.init.uniform_(m.bias, -bound, bound)
+
 if not cfg.backbone:
     print("Freezing backbone.")
     for k, v in model.backbone.named_parameters():

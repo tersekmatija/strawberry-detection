@@ -3,7 +3,7 @@
 dataset: "cocopeople"
 
 batch_size: 16
-epochs: 300
+epochs: 100
 optimizer: "sgd" #"adam"
 learning_rate: 0.005 #0.0005
 dataset_dir: "/home/paperspace/fiftyone/coco-2017"
@@ -12,7 +12,8 @@ warmup: 'linear'
 warmup_iters: 5000
 momentum: 0.937
 weight_decay: 0.0005
-pretrained:  "runs/exp37/best.pt"
+pretrained:  "runs/exp38/best.pt"
+reset_bias: True
 num_workers: 6
 
 decoder: True

@@ -66,6 +66,7 @@ class DetectionLoss(nn.Module):
         self.balance = balance
 
         self.bce = nn.BCEWithLogitsLoss()
+        self.bce_cls = nn.BCEWithLogitsLoss()
         self.device = device
 
     # calculate detection loss
@@ -73,6 +74,13 @@ class DetectionLoss(nn.Module):
         device = self.device
         lcls, lbox, lobj = torch.zeros(1, device=device), torch.zeros(1, device=device), torch.zeros(1, device=device)
         tcls, tbox, indices, anchors = self.build_targets(predictions, targets)  # targets
+        #print(tcls)
+        #print("---")
+        #print(tbox)
+        #print("---")
+        #print(indices)
+        #print("---")
+        #print(anchors)
 
         cp, cn = smooth_BCE(eps=0.0)
 
@@ -104,7 +112,7 @@ class DetectionLoss(nn.Module):
                 if self.nc > 1:  # cls loss (only if multiple classes)
                     t = torch.full_like(ps[:, 5:], cn, device=device)  # targets
                     t[range(n), tcls[i]] = cp
-                    lcls += BCEcls(ps[:, 5:], t)  # BCE
+                    lcls += self.bce_cls(ps[:, 5:], t)  # BCE
             lobj += self.bce(pi[..., 4], tobj) * self.balance[i]  # obj loss
         return lbox, lobj, lcls
 

@@ -88,7 +88,7 @@ class Detect(nn.Module):
         self.export = export
 
         self.anchors /= self.stride.float().view(-1, 1, 1)
-        self._initialize_biases()
+        #self._initialize_biases()
 
     def forward(self, x):
         z = []  # inference output
@@ -97,7 +97,7 @@ class Detect(nn.Module):
 
             if not self.export:
                 bs, _, ny, nx = x[i].shape  # x(bs,255,w,w) to x(bs,3,w,w,85)
-                x[i]=x[i].view(bs, self.na, self.no, ny*nx).permute(0, 1, 3, 2).view(bs, self.na, ny, nx, self.no).contiguous()
+                x[i] = x[i].view(bs, self.na, self.no, ny, nx).permute(0, 1, 3, 4, 2).contiguous()
             else:
                 x[i] = torch.sigmoid(x[i])
             if not self.training and not self.export:  # inference
