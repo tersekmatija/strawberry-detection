@@ -13,7 +13,7 @@ import numpy as np
 from utils.loss import CombinedLoss
 from utils.config import load_config
 from utils.draw import draw_overlay
-from utils.schedulers import CosineAnnealingLR
+from utils.schedulers import CosineAnnealingLR, LinearLR
 from torch.optim.lr_scheduler import LambdaLR#CosineAnnealingLR
 import utils.augmentations as A
 from datasets.loaders import get_loader
@@ -39,13 +39,18 @@ transforms = A.Compose([
     A.RandomGaussianBlur(cfg.blur_p, cfg.blur_ks),
     A.RandomHFlip(cfg.flip_p),
     A.RandomRotate(cfg.rotate_p),
-    A.RandomCrop(cfg.min_scale),
+    A.RandomCropToAspect(cfg.img_shape),
+    A.AutoContrast(),
+    A.ColorJitter(),
+    A.Occlusion(),
+    #A.RandomCrop(cfg.min_scale),
     A.Resize(cfg.img_shape)
 ])
 
-transforms_val = A.Compose([A.Resize(cfg.img_shape)])
 
-trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, cfg.batch_size, transforms=transforms, num_workers=cfg.num_workers, pin_memory=True)
+transforms_val = A.Compose([A.RandomCropToAspect(cfg.img_shape),A.Resize(cfg.img_shape)])
+
+trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, cfg.batch_size, transforms=transforms, num_workers=cfg.num_workers, pin_memory=True, shuffle=True)
 valloader = get_loader(cfg.dataset, "val", cfg.dataset_dir, 1, transforms=transforms_val, num_workers=cfg.num_workers, pin_memory=True)
 
 
@@ -54,8 +59,21 @@ model.train()
 model.cuda()
 
 if cfg.pretrained is not None:
-    state_dict = torch.load(cfg.pretrained, map_location="cpu")
-    model.load_state_dict(state_dict)
+    #state_dict = torch.load(cfg.pretrained, map_location="cpu")
+    #model.load_state_dict(state_dict)
+    pretrained_dict = torch.load(cfg.pretrained, map_location="cpu")
+    model_dict = model.state_dict()
+    pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict and model_dict[k].shape == pretrained_dict[k].shape}
+    print(f"Following weight not loaded: {[k for k in model_dict.keys() if k not in pretrained_dict]}")
+    model_dict.update(pretrained_dict) 
+    model.load_state_dict(model_dict)
+
+    if cfg.reset_bias:
+        print("Resetting bias on pretrained model!")
+        for m in model.det_head.detect.m:
+            fan_in, _ = torch.nn.init._calculate_fan_in_and_fan_out(m.weight)
+            bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
+            torch.nn.init.uniform_(m.bias, -bound, bound)
 
 if not cfg.backbone:
     print("Freezing backbone.")
@@ -89,14 +107,11 @@ else:
     raise RuntimeError(f"Optimizer {cfg.optimizer} not supported.")
 
 iters_per_epoch = len(trainloader)
+
 #scheduler = CosineAnnealingLR(optimizer,
-#    iters_per_epoch, #cfg.epochs * iters_per_epoch,
-#    eta_min = 0)#, warmup = cfg.warmup, warmup_iters = cfg.warmup_iters)
-scheduler = CosineAnnealingLR(optimizer,
-    iters_per_epoch * cfg.epochs, eta_min = 0, warmup = cfg.warmup, warmup_iters = cfg.warmup_iters)
-#lrf = 0.001
-#lf = lambda x: (1 - x / (epochs * iters_per_epoch)) * (1.0 - lrf) + lrf
-#scheduler = LambdaLR(optimizer, lr_lambda=lf)
+#    iters_per_epoch * cfg.epochs, eta_min = 0, warmup = cfg.warmup, warmup_iters = cfg.warmup_iters)
+scheduler = LinearLR(optimizer,
+    iters_per_epoch * cfg.epochs, eta_min = 0, warmup = cfg.warmup, warmup_iters = cfg.warmup_iters)#scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
 
 writer = SummaryWriter(cfg.save_dir)
 
@@ -140,7 +155,7 @@ for epoch in range(epochs):
             prog_bar.set_postfix(**{'run:': "model_name",
                                      **{key.split("/")[1] : value for key,value in logs.items()}})
             prog_bar.update(batch_size)
-    
+
     # validate
     model.eval()
     idx_draw = random.sample(range(len(valloader)), min(len(valloader),cfg.val_plot_num))

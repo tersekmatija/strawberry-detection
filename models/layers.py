@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from utils.activations import *
 import math
+import warnings
 
 # Adapted from YoloV5
 class Conv(nn.Module):
@@ -31,12 +32,12 @@ class Bottleneck(nn.Module):
         return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
 
 class C3(nn.Module):
-    def __init__(self, in_channels, out_channels, shortcut = True):
+    def __init__(self, in_channels, out_channels, n=1, shortcut = True):
         super().__init__()
         self.cv1 = Conv(in_channels, out_channels//2, 1, 1)
         self.cv2 = Conv(in_channels, out_channels//2, 1, 1)
         self.cv3 = Conv(2 * out_channels//2, out_channels, 1)
-        self.m = Bottleneck(out_channels//2, out_channels//2, shortcut = shortcut)
+        self.m = nn.Sequential(*(Bottleneck(out_channels//2, out_channels//2, shortcut = shortcut) for _ in range(n)))
 
     def forward(self, x):
         return self.cv3(torch.cat([self.m(self.cv1(x)), self.cv2(x)], 1))
@@ -52,6 +53,22 @@ class SPP(nn.Module):
         x = self.cv1(x)
         return self.cv2(torch.cat([x] + [m(x) for m in self.m], 1))
 
+class SPPF(nn.Module):
+    # Spatial Pyramid Pooling - Fast (SPPF) layer for YOLOv5 by Glenn Jocher
+    def __init__(self, c1, c2, k=5):  # equivalent to SPP(k=(5, 9, 13))
+        super().__init__()
+        c_ = c1 // 2  # hidden channels
+        self.cv1 = Conv(c1, c_, 1, 1)
+        self.cv2 = Conv(c_ * 4, c2, 1, 1)
+        self.m = nn.MaxPool2d(kernel_size=k, stride=1, padding=k // 2)
+
+    def forward(self, x):
+        x = self.cv1(x)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')  # suppress torch 1.9.0 max_pool2d() warning
+            y1 = self.m(x)
+            y2 = self.m(y1)
+            return self.cv2(torch.cat((x, y1, y2, self.m(y2)), 1))
 
 class Detect(nn.Module):
     stride = None  # strides computed during build
@@ -71,7 +88,7 @@ class Detect(nn.Module):
         self.export = export
 
         self.anchors /= self.stride.float().view(-1, 1, 1)
-        self._initialize_biases()
+        #self._initialize_biases()
 
     def forward(self, x):
         z = []  # inference output
@@ -80,12 +97,15 @@ class Detect(nn.Module):
 
             if not self.export:
                 bs, _, ny, nx = x[i].shape  # x(bs,255,w,w) to x(bs,3,w,w,85)
-                x[i]=x[i].view(bs, self.na, self.no, ny*nx).permute(0, 1, 3, 2).view(bs, self.na, ny, nx, self.no).contiguous()
+                x[i] = x[i].view(bs, self.na, self.no, ny, nx).permute(0, 1, 3, 4, 2).contiguous()
             else:
                 x[i] = torch.sigmoid(x[i])
             if not self.training and not self.export:  # inference
                 if self.grid[i].shape[2:4] != x[i].shape[2:4]:
                     self.grid[i] = self._make_grid(nx, ny).to(x[i].device)
+                #print(f"{x[i].shape} {self.grid[i].shape} {self.stride[i]}, {self.anchor_grid[i].shape}")
+                #print(self.grid[i])
+                # TODO: Check why grid different in YoloV5
                 y = x[i].sigmoid()
 
                 y[..., 0:2] = (y[..., 0:2] * 2. - 0.5 + self.grid[i].to(x[i].device)) * self.stride[i]  # xy

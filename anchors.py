@@ -6,7 +6,6 @@ from tqdm import tqdm
 import numpy as np
 import torch
 import yaml
-from scipy.cluster.vq import kmeans
 from tqdm import tqdm
 import argparse
 from tqdm import tqdm
@@ -20,6 +19,10 @@ from utils.loss import CombinedLoss
 from utils.config import load_config
 from models.model import Model
 from datasets.loaders import get_loader
+
+import matplotlib.pyplot as plt
+
+import utils.augmentations as A
 
 
 # Adapted from YoloV5
@@ -81,14 +84,23 @@ def kmean_anchors(loader, n=9, img_size=640, thr=4.0, gen=1000, verbose=True, ma
     # Get label wh
     labels = labels[:, 1:] #drop img id
     shapes = img_size * shapes / shapes.max()
+    shapes = shapes[:, [1,0]] # switch order w, h instead of h,w
     # wh0 = np.concatenate([l[:, 3:5] * shapes for l in labels])  # wh
+    print(labels[:5])
+    print(shapes[:5])
     wh0 = labels[:, 3:5] * shapes
+    print(wh0[:5])
     # Filter
     i = (wh0 < 3.0).any(1).sum()
     if i:
         print('WARNING: Extremely small objects found. '
               '%g of %g labels are < 3 pixels in width or height.' % (i, len(wh0)))
     wh = wh0[(wh0 >= 2.0).any(1)]  # filter > 2 pixels
+
+    wh1 = wh[wh[:,0] > 2*wh[:,1]]
+    s1 = wh1.std(0)  # sigmas for whitening
+    k1, dist1 = kmeans(wh1 / s1, 3, iter=30) 
+    k1 *= s1
 
     # Kmeans calculation
     print('Running kmeans for %g anchors on %g points...' % (n, len(wh)))
@@ -97,19 +109,24 @@ def kmean_anchors(loader, n=9, img_size=640, thr=4.0, gen=1000, verbose=True, ma
     k *= s
     wh = torch.tensor(wh, dtype=torch.float32)  # filtered
     wh0 = torch.tensor(wh0, dtype=torch.float32)  # unfiltered
+    wh1 = torch.tensor(wh1, dtype=torch.float32)
+    print_results(k1)
     k = print_results(k)
 
     # Plot
-    # k, d = [None] * 20, [None] * 20
-    # for i in tqdm(range(1, 21)):
-    #     k[i-1], d[i-1] = kmeans(wh / s, i)  # points, mean distance
-    # fig, ax = plt.subplots(1, 2, figsize=(14, 7), tight_layout=True)
-    # ax = ax.ravel()
-    # ax[0].plot(np.arange(1, 21), np.array(d) ** 2, marker='.')
-    # fig, ax = plt.subplots(1, 2, figsize=(14, 7))  # plot wh
-    # ax[0].hist(wh[wh[:, 0]<100, 0],400)
-    # ax[1].hist(wh[wh[:, 1]<100, 1],400)
-    # fig.savefig('wh.png', dpi=200)
+    """
+    k, d = [None] * 20, [None] * 20
+    for i in tqdm(range(1, 21)):
+        k[i-1], d[i-1] = kmeans(wh / s, i)  # points, mean distance
+    fig, ax = plt.subplots(1, 2, figsize=(14, 7), tight_layout=True)
+    ax = ax.ravel()
+    ax[0].plot(np.arange(1, 21), np.array(d) ** 2, marker='.')
+    fig, ax = plt.subplots(1, 2, figsize=(14, 7))  # plot wh
+    ax[0].hist(wh[wh[:, 0]<100, 0],400)
+    ax[1].hist(wh[wh[:, 1]<100, 1],400)
+    #plt.show()
+    fig.savefig('wh.png', dpi=200)
+    """
 
     # Evolve
     npr = np.random
@@ -137,7 +154,11 @@ parser.add_argument('-n', '--num_anchors', type=int, help="Number of anchors", r
 args = parser.parse_args()
 
 cfg = load_config(args.config)
+transforms = A.Compose([
+    A.RandomCropToAspect(cfg.img_shape),
+    A.Resize(cfg.img_shape)
+])
 
-trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, 1)
+trainloader = get_loader(cfg.dataset, "train", cfg.dataset_dir, 1, transforms=transforms, shuffle=True)
 
-kmean_anchors(trainloader, args.num_anchors, img_size = min(cfg.img_shape))
+kmean_anchors(trainloader, n = 9, img_size = max(cfg.img_shape), max_limit=10000)

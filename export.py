@@ -32,9 +32,8 @@ model = Model(cfg.num_classes, cfg.anchors, cfg.strides, cfg.reduction, export=T
 if cfg.demo_weights is None:
     raise RuntimeError("Demo run not set!")
 state_dict = torch.load(cfg.demo_weights, map_location="cpu")
-
-
 model.load_state_dict(state_dict)
+
 model.cpu()
 model.eval()
 
@@ -55,8 +54,9 @@ cmd = f"mo --input_model model.onnx " \
         f"--output_dir output " \
         f"--model_name model " \
         '--data_type FP16 ' \
-        '--reverse_input_channel ' \
         '--scale 255 ' #\
+        #'--reverse_input_channel ' \
+        
         #f'--output "{output_list}"'
 
 subprocess.check_output(cmd, shell=True)
